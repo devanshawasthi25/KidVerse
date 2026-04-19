@@ -1,0 +1,900 @@
+{% extends "base.html" %}
+{% block title %}🌍 KidVerse World{% endblock %}
+
+{% block extra_styles %}
+body { overflow: hidden; background: #000; }
+.navbar { display: none; }
+.focus-toggle { display: none; }
+#toast-container { z-index: 99999; }
+
+#world-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+
+/* HUD Overlay */
+.hud {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; z-index: 100;
+  pointer-events: none;
+}
+.hud > * { pointer-events: all; }
+
+.hud-left {
+  display: flex; align-items: center; gap: 14px;
+}
+.hud-logo {
+  font-family: 'Fredoka One', cursive; font-size: 1.6rem;
+  color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  text-decoration: none;
+}
+.hud-logo span { color: #FFD166; }
+
+.hud-user {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(12px);
+  border-radius: 999px; padding: 8px 18px 8px 12px;
+  color: white; font-weight: 700; font-size: 0.9rem;
+}
+.hud-avatar { font-size: 1.6rem; }
+.hud-pts {
+  background: rgba(255,209,102,0.3); border-radius: 999px;
+  padding: 3px 10px; font-size: 0.82rem; font-weight: 800;
+  color: #FFD166;
+}
+
+.hud-right {
+  display: flex; gap: 10px;
+}
+.hud-btn {
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(12px);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 14px; padding: 10px 18px;
+  color: white; font-weight: 800; font-size: 0.88rem;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Nunito', sans-serif;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.hud-btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+  transform: translateY(-2px);
+}
+
+/* Loading Screen */
+#loading-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: white; transition: opacity 0.8s ease;
+}
+#loading-screen.fade-out { opacity: 0; pointer-events: none; }
+#loading-screen h1 {
+  font-family: 'Fredoka One', cursive; font-size: 3rem;
+  margin-bottom: 8px; background: linear-gradient(135deg, #FF9A8B, #FFD166, #6BCB77, #C9B8FF);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+#loading-screen p { color: rgba(255,255,255,0.6); font-weight: 600; }
+.load-bar {
+  width: 200px; height: 6px; background: rgba(255,255,255,0.1);
+  border-radius: 999px; margin-top: 24px; overflow: hidden;
+}
+.load-fill {
+  height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, #FF9A8B, #FFD166, #6BCB77);
+  transition: width 0.3s;
+}
+
+/* Interaction Prompt */
+.interact-prompt {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 16px; padding: 14px 28px;
+  color: white; font-weight: 800; font-size: 1.1rem;
+  z-index: 200; display: none;
+  animation: promptPulse 2s ease-in-out infinite;
+  cursor: pointer;
+}
+.interact-prompt.show { display: block; }
+@keyframes promptPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,154,139,0.3); }
+  50%      { box-shadow: 0 0 40px rgba(255,154,139,0.6); }
+}
+
+/* Zone Info Panel */
+.zone-panel {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(16px);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 20px; padding: 20px 30px;
+  color: white; text-align: center; z-index: 150;
+  min-width: 280px; display: none;
+  animation: slideUp 0.4s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.zone-panel.show { display: block; }
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(30px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+.zone-panel h3 { font-size: 1.3rem; margin-bottom: 4px; }
+.zone-panel p { color: rgba(255,255,255,0.7); font-size: 0.9rem; font-weight: 600; margin-bottom: 14px; }
+.zone-enter-btn {
+  background: linear-gradient(135deg, #FF9A8B, #FF7A68);
+  border: none; border-radius: 999px; padding: 12px 28px;
+  color: white; font-weight: 800; font-size: 1rem;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  transition: transform 0.2s; box-shadow: 0 4px 20px rgba(255,122,104,0.4);
+}
+.zone-enter-btn:hover { transform: scale(1.05); }
+
+/* Controls hint */
+.controls-hint {
+  position: fixed; bottom: 20px; right: 20px;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+  border-radius: 12px; padding: 12px 16px;
+  color: rgba(255,255,255,0.5); font-size: 0.78rem;
+  font-weight: 600; z-index: 100; line-height: 1.6;
+}
+
+/* Minimap */
+.minimap {
+  position: fixed; bottom: 20px; left: 20px;
+  width: 140px; height: 140px;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 16px; z-index: 100; overflow: hidden;
+}
+.minimap canvas { width: 100%; height: 100%; }
+
+@media (max-width: 768px) {
+  .hud { padding: 10px 14px; }
+  .hud-logo { font-size: 1.2rem; }
+  .hud-right { gap: 6px; }
+  .hud-btn { padding: 8px 12px; font-size: 0.8rem; }
+  .minimap { display: none; }
+  .controls-hint { display: none; }
+}
+{% endblock %}
+
+{% block content %}
+<!-- Loading Screen -->
+<div id="loading-screen">
+  <div style="font-size:5rem;margin-bottom:16px;animation: bounce 2s infinite">🌍</div>
+  <h1>KidVerse</h1>
+  <p id="load-text">Building your world...</p>
+  <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+</div>
+
+<!-- 3D Canvas -->
+<canvas id="world-canvas"></canvas>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="hud-left">
+    <a class="hud-logo" href="/">Kid<span>Verse</span> 🌟</a>
+    <div class="hud-user">
+      <span class="hud-avatar" id="hud-avatar">⭐</span>
+      <span id="hud-name">{{ user_name }}</span>
+      <span class="hud-pts" id="hud-pts">⭐ 0</span>
+    </div>
+  </div>
+  <div class="hud-right">
+    <a class="hud-btn" href="/dashboard?user_id={{ user_id }}">📊 Stats</a>
+    <button class="hud-btn" onclick="toggleAudio()">🔊 Sound</button>
+    <a class="hud-btn" href="/">🚪 Exit</a>
+  </div>
+</div>
+
+<!-- Interaction Prompt -->
+<div class="interact-prompt" id="interact-prompt"></div>
+
+<!-- Zone Panel -->
+<div class="zone-panel" id="zone-panel">
+  <h3 id="zone-title"></h3>
+  <p id="zone-desc"></p>
+  <button class="zone-enter-btn" id="zone-enter-btn" onclick="enterZone()">Enter →</button>
+</div>
+
+<!-- Controls Hint -->
+<div class="controls-hint">
+  🖱️ Click + Drag to look<br>
+  WASD / Arrow keys to move<br>
+  Click buildings to interact
+</div>
+
+<!-- Minimap -->
+<div class="minimap"><canvas id="minimap-canvas" width="140" height="140"></canvas></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const USER_ID = {{ user_id | default(0) }};
+const AGE_GROUP = "{{ age_group | default('creator') }}";
+const USER_NAME = "{{ user_name | default('Explorer') }}";
+
+// ══════════════════════════════════════════════════════════════════════
+// THEME CONFIG per age group
+// ══════════════════════════════════════════════════════════════════════
+const THEMES = {
+  toddler: {
+    sky1: 0x87CEEB, sky2: 0xFFE4B5, ground: 0x7CFC00,
+    groundAlt: 0x98FB98, fog: 0x87CEEB, ambient: 0xFFE4C4,
+    sun: 0xFFD700, label: 'Toddler Wonderland 🌈',
+    zones: [
+      { name: '🐾 Animal Friends', desc: 'Meet cute animals & learn sounds!', color: 0xFFB347, url: '/games?user_id='+USER_ID, pos: [0, 0, -20], height: 6, shape: 'dome' },
+      { name: '🌈 Color World', desc: 'Explore the rainbow!', color: 0xFF69B4, url: '/video-stories?user_id='+USER_ID, pos: [-18, 0, 8], height: 5, shape: 'cylinder' },
+      { name: '🔢 Number Land', desc: 'Count & play!', color: 0x98FB98, url: '/toddler-hub?user_id='+USER_ID, pos: [18, 0, 8], height: 5, shape: 'dome' },
+      { name: '📖 Story Tree', desc: 'Magical bedtime stories!', color: 0xDDA0DD, url: '/story?user_id='+USER_ID, pos: [0, 0, 22], height: 8, shape: 'tree' },
+    ]
+  },
+  explorer: {
+    sky1: 0x1a1a2e, sky2: 0x16213e, ground: 0x2d6a4f,
+    groundAlt: 0x40916c, fog: 0x1a1a2e, ambient: 0x9381FF,
+    sun: 0xFF9A8B, label: 'Explorer Island 🏝️',
+    zones: [
+      { name: '🎮 Game Arena', desc: 'Quizzes, puzzles & brain teasers!', color: 0xFF6B6B, url: '/games?user_id='+USER_ID, pos: [0, 0, -22], height: 9, shape: 'castle' },
+      { name: '📺 Cinema Cave', desc: 'Watch & learn with video stories!', color: 0x4ECDC4, url: '/video-stories?user_id='+USER_ID, pos: [-20, 0, 10], height: 7, shape: 'dome' },
+      { name: '📖 Story Tower', desc: 'AI creates magical tales just for you!', color: 0xFFE66D, url: '/story?user_id='+USER_ID, pos: [20, 0, 10], height: 10, shape: 'tower' },
+      { name: '🤖 Cosmo Lab', desc: 'Chat with your AI friend!', color: 0xA8DADC, url: '/chat?user_id='+USER_ID, pos: [0, 0, 24], height: 7, shape: 'cylinder' },
+      { name: '🎨 Art Studio', desc: 'Draw & create masterpieces!', color: 0xF4A261, url: '/draw?user_id='+USER_ID, pos: [-14, 0, -14], height: 6, shape: 'dome' },
+    ]
+  },
+  creator: {
+    sky1: 0x0a0a1a, sky2: 0x1a0a2e, ground: 0x1a1a3e,
+    groundAlt: 0x2a2a5e, fog: 0x0a0a1a, ambient: 0x7B68EE,
+    sun: 0xDA70D6, label: 'Creator Nexus 🚀',
+    zones: [
+      { name: '🎮 Challenge Arena', desc: 'Test your knowledge — hard mode!', color: 0xFF4757, url: '/games?user_id='+USER_ID, pos: [0, 0, -24], height: 12, shape: 'castle' },
+      { name: '📺 Holo Theater', desc: 'Interactive video experiences!', color: 0x2ED573, url: '/video-stories?user_id='+USER_ID, pos: [-22, 0, 8], height: 8, shape: 'dome' },
+      { name: '📖 Story Forge', desc: 'Craft epic tales with AI!', color: 0x5352ED, url: '/story?user_id='+USER_ID, pos: [22, 0, 8], height: 11, shape: 'tower' },
+      { name: '🤖 AI Workshop', desc: 'Deep conversations with Cosmo!', color: 0x1E90FF, url: '/chat?user_id='+USER_ID, pos: [0, 0, 26], height: 9, shape: 'cylinder' },
+      { name: '🎨 Design Lab', desc: 'Create digital art!', color: 0xFFA502, url: '/draw?user_id='+USER_ID, pos: [-16, 0, -16], height: 7, shape: 'castle' },
+    ]
+  }
+};
+
+const theme = THEMES[AGE_GROUP] || THEMES.creator;
+
+// ══════════════════════════════════════════════════════════════════════
+// THREE.JS SETUP
+// ══════════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('world-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(theme.fog, 0.012);
+
+const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.set(0, 8, 35);
+
+// ══════════════════════════════════════════════════════════════════════
+// LIGHTING
+// ══════════════════════════════════════════════════════════════════════
+const ambientLight = new THREE.AmbientLight(theme.ambient, 0.5);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(theme.sun, 1.2);
+dirLight.position.set(30, 40, 20);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 150;
+dirLight.shadow.camera.left = -60;
+dirLight.shadow.camera.right = 60;
+dirLight.shadow.camera.top = 60;
+dirLight.shadow.camera.bottom = -60;
+scene.add(dirLight);
+
+const hemiLight = new THREE.HemisphereLight(theme.sky1, theme.ground, 0.4);
+scene.add(hemiLight);
+
+// Point lights for atmosphere
+const pointColors = [0xFF9A8B, 0xFFD166, 0x6BCB77, 0xC9B8FF];
+pointColors.forEach((c, i) => {
+  const pl = new THREE.PointLight(c, 0.6, 30);
+  pl.position.set(Math.cos(i*Math.PI/2)*15, 5, Math.sin(i*Math.PI/2)*15);
+  scene.add(pl);
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// SKY DOME
+// ══════════════════════════════════════════════════════════════════════
+const skyGeo = new THREE.SphereGeometry(200, 32, 32);
+const skyMat = new THREE.ShaderMaterial({
+  uniforms: {
+    topColor: { value: new THREE.Color(theme.sky1) },
+    bottomColor: { value: new THREE.Color(theme.sky2) },
+    offset: { value: 20 },
+    exponent: { value: 0.6 }
+  },
+  vertexShader: `
+    varying vec3 vWorldPosition;
+    void main() {
+      vec4 worldPos = modelMatrix * vec4(position, 1.0);
+      vWorldPosition = worldPos.xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 topColor;
+    uniform vec3 bottomColor;
+    uniform float offset;
+    uniform float exponent;
+    varying vec3 vWorldPosition;
+    void main() {
+      float h = normalize(vWorldPosition + offset).y;
+      gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+    }
+  `,
+  side: THREE.BackSide
+});
+scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+// ══════════════════════════════════════════════════════════════════════
+// GROUND — Circular island with gradient
+// ══════════════════════════════════════════════════════════════════════
+const groundRadius = 60;
+const groundGeo = new THREE.CircleGeometry(groundRadius, 64);
+const groundMat = new THREE.MeshStandardMaterial({
+  color: theme.ground, roughness: 0.9, metalness: 0.05,
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Island edge ring (water/void)
+const edgeGeo = new THREE.RingGeometry(groundRadius - 2, groundRadius + 40, 64);
+const edgeMat = new THREE.MeshStandardMaterial({
+  color: AGE_GROUP === 'toddler' ? 0x4FC3F7 : (AGE_GROUP === 'explorer' ? 0x1B4332 : 0x0a0a2e),
+  roughness: 0.3, metalness: 0.5, transparent: true, opacity: 0.8,
+});
+const edge = new THREE.Mesh(edgeGeo, edgeMat);
+edge.rotation.x = -Math.PI / 2;
+edge.position.y = -0.1;
+scene.add(edge);
+
+// ══════════════════════════════════════════════════════════════════════
+// TERRAIN — Small hills and decoration
+// ══════════════════════════════════════════════════════════════════════
+function addHill(x, z, r, h, color) {
+  const geo = new THREE.SphereGeometry(r, 16, 12, 0, Math.PI*2, 0, Math.PI/2);
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, 0, z);
+  mesh.scale.y = h / r;
+  mesh.receiveShadow = true;
+  mesh.castShadow = true;
+  scene.add(mesh);
+}
+for (let i = 0; i < 12; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const d = 25 + Math.random() * 25;
+  addHill(Math.cos(a)*d, Math.sin(a)*d, 2+Math.random()*4, 0.4+Math.random()*0.6, theme.groundAlt);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TREES (simple stylized)
+// ══════════════════════════════════════════════════════════════════════
+function addTree(x, z, scale) {
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2*scale, 0.35*scale, 2*scale, 8),
+    new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9 })
+  );
+  trunk.position.set(x, scale, z);
+  trunk.castShadow = true;
+  scene.add(trunk);
+
+  const colors = AGE_GROUP === 'toddler' ? [0xFF69B4, 0x98FB98, 0xFFD700, 0x87CEEB] :
+                 AGE_GROUP === 'explorer' ? [0x2d6a4f, 0x40916c, 0x52b788, 0x74c69d] :
+                 [0x4a0e78, 0x7B2FBE, 0x9B59B6, 0x3498DB];
+  const foliage = new THREE.Mesh(
+    new THREE.SphereGeometry(1.5*scale, 8, 6),
+    new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random()*colors.length)], roughness: 0.8 })
+  );
+  foliage.position.set(x, 2*scale + 0.5, z);
+  foliage.castShadow = true;
+  scene.add(foliage);
+}
+for (let i = 0; i < 30; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const d = 15 + Math.random() * 35;
+  const x = Math.cos(a) * d;
+  const z = Math.sin(a) * d;
+  // Don't place trees too close to buildings
+  const tooClose = theme.zones.some(zone => {
+    const dx = x - zone.pos[0], dz = z - zone.pos[2];
+    return Math.sqrt(dx*dx + dz*dz) < 8;
+  });
+  if (!tooClose && Math.sqrt(x*x+z*z) < groundRadius-5) {
+    addTree(x, z, 0.6 + Math.random() * 0.8);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ZONE BUILDINGS — Interactive 3D structures
+// ══════════════════════════════════════════════════════════════════════
+const zoneObjects = [];
+const zoneLights = [];
+
+function createBuilding(zone, idx) {
+  const group = new THREE.Group();
+  const [x, , z] = zone.pos;
+  group.position.set(x, 0, z);
+  group.userData = { zone, idx, type: 'zone' };
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: zone.color, roughness: 0.3, metalness: 0.2,
+    emissive: zone.color, emissiveIntensity: 0.15,
+  });
+
+  let mainMesh;
+  switch (zone.shape) {
+    case 'dome':
+      mainMesh = new THREE.Mesh(new THREE.SphereGeometry(3, 24, 16, 0, Math.PI*2, 0, Math.PI/2), mat);
+      mainMesh.scale.y = zone.height / 3;
+      break;
+    case 'cylinder':
+      mainMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3, zone.height, 16), mat);
+      mainMesh.position.y = zone.height / 2;
+      break;
+    case 'tower':
+      mainMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 3, zone.height, 6), mat);
+      mainMesh.position.y = zone.height / 2;
+      // Tower top
+      const top = new THREE.Mesh(new THREE.ConeGeometry(2.5, 3, 6), mat.clone());
+      top.material.emissiveIntensity = 0.3;
+      top.position.y = zone.height + 1;
+      top.castShadow = true;
+      group.add(top);
+      break;
+    case 'castle':
+      mainMesh = new THREE.Mesh(new THREE.BoxGeometry(5, zone.height, 5), mat);
+      mainMesh.position.y = zone.height / 2;
+      // Battlements
+      for (let c = 0; c < 4; c++) {
+        const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 2, 8), mat.clone());
+        turret.material.emissiveIntensity = 0.3;
+        const cx = (c < 2 ? -2.2 : 2.2), cz = (c % 2 === 0 ? -2.2 : 2.2);
+        turret.position.set(cx, zone.height + 1, cz);
+        turret.castShadow = true;
+        group.add(turret);
+      }
+      break;
+    case 'tree':
+      mainMesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, zone.height, 8), mat);
+      mainMesh.position.y = zone.height / 2;
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 12), mat.clone());
+      crown.material.emissiveIntensity = 0.15;
+      crown.position.y = zone.height + 1;
+      crown.castShadow = true;
+      group.add(crown);
+      break;
+    default:
+      mainMesh = new THREE.Mesh(new THREE.BoxGeometry(4, zone.height, 4), mat);
+      mainMesh.position.y = zone.height / 2;
+  }
+
+  mainMesh.castShadow = true;
+  mainMesh.receiveShadow = true;
+  group.add(mainMesh);
+
+  // Floating glow orb above
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 16, 16),
+    new THREE.MeshStandardMaterial({
+      color: zone.color, emissive: zone.color, emissiveIntensity: 1.5,
+      transparent: true, opacity: 0.8,
+    })
+  );
+  orb.position.y = zone.height + (zone.shape === 'tree' ? 6 : zone.shape === 'tower' ? 5 : 3);
+  orb.userData.isOrb = true;
+  group.add(orb);
+
+  // Point light at orb
+  const light = new THREE.PointLight(zone.color, 1.2, 15);
+  light.position.copy(orb.position);
+  group.add(light);
+  zoneLights.push(light);
+
+  // Base ring
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(3.5, 4.5, 32),
+    new THREE.MeshStandardMaterial({
+      color: zone.color, emissive: zone.color, emissiveIntensity: 0.5,
+      transparent: true, opacity: 0.4, side: THREE.DoubleSide,
+    })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.05;
+  group.add(ring);
+
+  scene.add(group);
+  zoneObjects.push(group);
+}
+
+theme.zones.forEach((z, i) => createBuilding(z, i));
+
+// ══════════════════════════════════════════════════════════════════════
+// PARTICLES — Stars / Fireflies / Magic dust
+// ══════════════════════════════════════════════════════════════════════
+const particleCount = AGE_GROUP === 'toddler' ? 300 : AGE_GROUP === 'explorer' ? 500 : 800;
+const particleGeo = new THREE.BufferGeometry();
+const particlePositions = new Float32Array(particleCount * 3);
+const particleSpeeds = [];
+for (let i = 0; i < particleCount; i++) {
+  particlePositions[i*3]     = (Math.random() - 0.5) * 120;
+  particlePositions[i*3 + 1] = Math.random() * 60 + 2;
+  particlePositions[i*3 + 2] = (Math.random() - 0.5) * 120;
+  particleSpeeds.push(0.2 + Math.random() * 0.5);
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+const particleMat = new THREE.PointsMaterial({
+  color: AGE_GROUP === 'toddler' ? 0xFFD700 : AGE_GROUP === 'explorer' ? 0x9381FF : 0xDA70D6,
+  size: AGE_GROUP === 'toddler' ? 0.4 : 0.25,
+  transparent: true, opacity: 0.8,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+});
+const particles = new THREE.Points(particleGeo, particleMat);
+scene.add(particles);
+
+// ══════════════════════════════════════════════════════════════════════
+// PLAYER CHARACTER
+// ══════════════════════════════════════════════════════════════════════
+const player = new THREE.Group();
+
+// Body
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0xFF9A8B, roughness: 0.4, metalness: 0.1 });
+const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1, 8, 16), bodyMat);
+body.position.y = 1.5;
+body.castShadow = true;
+player.add(body);
+
+// Head
+const head = new THREE.Mesh(
+  new THREE.SphereGeometry(0.55, 16, 16),
+  new THREE.MeshStandardMaterial({ color: 0xFFDBAC, roughness: 0.6 })
+);
+head.position.y = 2.8;
+head.castShadow = true;
+player.add(head);
+
+// Eyes
+[-0.18, 0.18].forEach(xOff => {
+  const eye = new THREE.Mesh(
+    new THREE.SphereGeometry(0.08, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a2e, emissive: 0x1a1a2e, emissiveIntensity: 0.5 })
+  );
+  eye.position.set(xOff, 2.85, 0.45);
+  player.add(eye);
+});
+
+// Glow ring around player
+const glowRing = new THREE.Mesh(
+  new THREE.RingGeometry(0.8, 1.2, 32),
+  new THREE.MeshStandardMaterial({
+    color: 0xFF9A8B, emissive: 0xFF9A8B, emissiveIntensity: 0.8,
+    transparent: true, opacity: 0.3, side: THREE.DoubleSide,
+  })
+);
+glowRing.rotation.x = -Math.PI / 2;
+glowRing.position.y = 0.05;
+player.add(glowRing);
+
+player.position.set(0, 0, 30);
+scene.add(player);
+
+// ══════════════════════════════════════════════════════════════════════
+// CAMERA CONTROLS — Third person
+// ══════════════════════════════════════════════════════════════════════
+let cameraAngleX = 0, cameraAngleY = 0.3;
+let isDragging = false, lastMouseX = 0, lastMouseY = 0;
+const cameraDistance = 12;
+const cameraHeight = 6;
+
+canvas.addEventListener('mousedown', e => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  cameraAngleX -= (e.clientX - lastMouseX) * 0.005;
+  cameraAngleY = Math.max(-0.2, Math.min(0.8, cameraAngleY + (e.clientY - lastMouseY) * 0.005));
+  lastMouseX = e.clientX; lastMouseY = e.clientY;
+});
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mouseleave', () => isDragging = false);
+
+// Touch controls
+canvas.addEventListener('touchstart', e => {
+  isDragging = true;
+  lastMouseX = e.touches[0].clientX; lastMouseY = e.touches[0].clientY;
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  cameraAngleX -= (e.touches[0].clientX - lastMouseX) * 0.005;
+  cameraAngleY = Math.max(-0.2, Math.min(0.8, cameraAngleY + (e.touches[0].clientY - lastMouseY) * 0.005));
+  lastMouseX = e.touches[0].clientX; lastMouseY = e.touches[0].clientY;
+}, { passive: true });
+canvas.addEventListener('touchend', () => isDragging = false);
+
+// ══════════════════════════════════════════════════════════════════════
+// MOVEMENT — WASD / Arrow keys
+// ══════════════════════════════════════════════════════════════════════
+const keys = {};
+document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+const moveSpeed = 0.2;
+let playerAngle = 0;
+
+function updatePlayer() {
+  let dx = 0, dz = 0;
+  if (keys['w'] || keys['arrowup'])    dz -= 1;
+  if (keys['s'] || keys['arrowdown'])  dz += 1;
+  if (keys['a'] || keys['arrowleft'])  dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+
+  if (dx || dz) {
+    const angle = cameraAngleX;
+    const mx = dx * Math.cos(angle) - dz * Math.sin(angle);
+    const mz = dx * Math.sin(angle) + dz * Math.cos(angle);
+    const len = Math.sqrt(mx*mx + mz*mz);
+    const nx = (mx / len) * moveSpeed;
+    const nz = (mz / len) * moveSpeed;
+
+    const newX = player.position.x + nx;
+    const newZ = player.position.z + nz;
+
+    // Boundary check
+    if (Math.sqrt(newX*newX + newZ*newZ) < groundRadius - 3) {
+      player.position.x = newX;
+      player.position.z = newZ;
+    }
+
+    playerAngle = Math.atan2(mx, mz);
+    player.rotation.y = playerAngle;
+
+    // Bobbing animation
+    body.position.y = 1.5 + Math.sin(Date.now() * 0.01) * 0.1;
+    head.position.y = 2.8 + Math.sin(Date.now() * 0.01) * 0.1;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CLICK INTERACTION — Raycasting
+// ══════════════════════════════════════════════════════════════════════
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let activeZone = null;
+
+canvas.addEventListener('click', e => {
+  if (isDragging) return;
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  // Check zone objects
+  for (const group of zoneObjects) {
+    const intersects = raycaster.intersectObjects(group.children, true);
+    if (intersects.length > 0) {
+      showZonePanel(group.userData.zone);
+      return;
+    }
+  }
+  hideZonePanel();
+});
+
+function showZonePanel(zone) {
+  activeZone = zone;
+  document.getElementById('zone-title').textContent = zone.name;
+  document.getElementById('zone-desc').textContent = zone.desc;
+  document.getElementById('zone-panel').classList.add('show');
+}
+
+function hideZonePanel() {
+  activeZone = null;
+  document.getElementById('zone-panel').classList.remove('show');
+}
+
+function enterZone() {
+  if (activeZone) window.location.href = activeZone.url;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PROXIMITY DETECTION
+// ══════════════════════════════════════════════════════════════════════
+let nearZone = null;
+
+function checkProximity() {
+  const prompt = document.getElementById('interact-prompt');
+  let closest = null, closestDist = Infinity;
+
+  for (const group of zoneObjects) {
+    const dx = player.position.x - group.position.x;
+    const dz = player.position.z - group.position.z;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist < 8 && dist < closestDist) {
+      closest = group.userData.zone;
+      closestDist = dist;
+    }
+  }
+
+  if (closest && closest !== nearZone) {
+    nearZone = closest;
+    prompt.textContent = `Press E or Click to enter ${closest.name}`;
+    prompt.classList.add('show');
+  } else if (!closest && nearZone) {
+    nearZone = null;
+    prompt.classList.remove('show');
+    hideZonePanel();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'e' && nearZone) {
+    showZonePanel(nearZone);
+  }
+  if (e.key === 'Enter' && activeZone) {
+    enterZone();
+  }
+  if (e.key === 'Escape') {
+    hideZonePanel();
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// MINIMAP
+// ══════════════════════════════════════════════════════════════════════
+const minimapCanvas = document.getElementById('minimap-canvas');
+const mmCtx = minimapCanvas.getContext('2d');
+
+function drawMinimap() {
+  mmCtx.clearRect(0, 0, 140, 140);
+  mmCtx.fillStyle = 'rgba(0,0,0,0.3)';
+  mmCtx.fillRect(0, 0, 140, 140);
+
+  const scale = 140 / (groundRadius * 2.2);
+  const cx = 70, cy = 70;
+
+  // Ground circle
+  mmCtx.beginPath();
+  mmCtx.arc(cx, cy, groundRadius * scale, 0, Math.PI * 2);
+  mmCtx.fillStyle = 'rgba(45,106,79,0.4)';
+  mmCtx.fill();
+
+  // Zones
+  theme.zones.forEach(z => {
+    const mx = cx + z.pos[0] * scale;
+    const my = cy + z.pos[2] * scale;
+    mmCtx.beginPath();
+    mmCtx.arc(mx, my, 4, 0, Math.PI * 2);
+    mmCtx.fillStyle = '#' + z.color.toString(16).padStart(6, '0');
+    mmCtx.fill();
+  });
+
+  // Player
+  const px = cx + player.position.x * scale;
+  const py = cy + player.position.z * scale;
+  mmCtx.beginPath();
+  mmCtx.arc(px, py, 3, 0, Math.PI * 2);
+  mmCtx.fillStyle = '#FF9A8B';
+  mmCtx.fill();
+  mmCtx.strokeStyle = 'white';
+  mmCtx.lineWidth = 1.5;
+  mmCtx.stroke();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ANIMATION LOOP
+// ══════════════════════════════════════════════════════════════════════
+let time = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  time += 0.016;
+
+  // Update player movement
+  updatePlayer();
+
+  // Camera follow (third person)
+  const camX = player.position.x + Math.sin(cameraAngleX) * cameraDistance;
+  const camZ = player.position.z + Math.cos(cameraAngleX) * cameraDistance;
+  const camY = player.position.y + cameraHeight + cameraAngleY * 10;
+  camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.08);
+  camera.lookAt(player.position.x, player.position.y + 2, player.position.z);
+
+  // Animate particles
+  const positions = particleGeo.attributes.position.array;
+  for (let i = 0; i < particleCount; i++) {
+    positions[i*3 + 1] += Math.sin(time * particleSpeeds[i] + i) * 0.02;
+    positions[i*3]     += Math.sin(time * 0.3 + i * 0.5) * 0.005;
+  }
+  particleGeo.attributes.position.needsUpdate = true;
+
+  // Animate orbs (bob and pulse)
+  zoneObjects.forEach((g, i) => {
+    g.children.forEach(child => {
+      if (child.userData.isOrb) {
+        child.position.y += Math.sin(time * 2 + i) * 0.003;
+        child.scale.setScalar(1 + Math.sin(time * 3 + i * 2) * 0.15);
+      }
+    });
+  });
+
+  // Zone lights pulse
+  zoneLights.forEach((l, i) => {
+    l.intensity = 1.0 + Math.sin(time * 2 + i * 1.5) * 0.4;
+  });
+
+  // Glow ring pulse
+  glowRing.scale.setScalar(1 + Math.sin(time * 3) * 0.1);
+  glowRing.material.opacity = 0.2 + Math.sin(time * 2) * 0.1;
+
+  // Proximity check
+  checkProximity();
+
+  // Minimap
+  if (Math.floor(time * 10) % 3 === 0) drawMinimap();
+
+  renderer.render(scene, camera);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// LOADING SEQUENCE
+// ══════════════════════════════════════════════════════════════════════
+const loadFill = document.getElementById('load-fill');
+const loadText = document.getElementById('load-text');
+const loadSteps = [
+  [20, 'Creating terrain...'],
+  [40, 'Building structures...'],
+  [60, 'Placing trees...'],
+  [80, 'Adding magic...'],
+  [100, 'Welcome to ' + theme.label],
+];
+let stepIdx = 0;
+const loadInterval = setInterval(() => {
+  if (stepIdx >= loadSteps.length) {
+    clearInterval(loadInterval);
+    setTimeout(() => {
+      document.getElementById('loading-screen').classList.add('fade-out');
+      animate();
+    }, 500);
+    return;
+  }
+  loadFill.style.width = loadSteps[stepIdx][0] + '%';
+  loadText.textContent = loadSteps[stepIdx][1];
+  stepIdx++;
+}, 400);
+
+// Fetch user stats
+fetch(`/api/v1/users/${USER_ID}/stats`).then(r=>r.json()).then(d => {
+  const AVATARS = {star:'⭐',rocket:'🚀',dragon:'🐉',uni:'🦄',robot:'🤖',cat:'🐱'};
+  document.getElementById('hud-avatar').textContent = AVATARS[d.avatar] || '⭐';
+  document.getElementById('hud-pts').textContent = '⭐ ' + d.points;
+}).catch(() => {});
+
+// ══════════════════════════════════════════════════════════════════════
+// RESIZE
+// ══════════════════════════════════════════════════════════════════════
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Audio toggle
+let audioOn = false;
+function toggleAudio() {
+  audioOn = !audioOn;
+  // Could add ambient sounds here
+}
+</script>
+{% endblock %}

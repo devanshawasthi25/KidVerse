@@ -1,0 +1,592 @@
+{% extends "base.html" %}
+{% block title %}📺 Video Stories — KidVerse{% endblock %}
+
+{% block extra_styles %}
+.vs-page { max-width: 900px; margin: 0 auto; padding: 20px 20px 80px; }
+
+.vs-header { text-align: center; padding: 30px 0 20px; }
+.vs-header h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); }
+.vs-header p { color: var(--text-soft); margin-top: 4px; }
+
+/* Story List View */
+.story-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px; margin-top: 24px;
+}
+.story-card {
+  background: white; border-radius: 20px;
+  box-shadow: var(--shadow); overflow: hidden;
+  cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+}
+.story-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
+.story-thumb {
+  height: 140px; display: flex; align-items: center; justify-content: center;
+  font-size: 4rem;
+}
+.story-thumb.toddler { background: linear-gradient(135deg, #FEF3C7, #FDE68A); }
+.story-thumb.explorer { background: linear-gradient(135deg, #ECFDF5, #A7F3D0); }
+.story-thumb.creator  { background: linear-gradient(135deg, #F0ECFF, #DDD6FE); }
+.story-info { padding: 18px 20px; }
+.story-info h3 { font-size: 1.15rem; margin-bottom: 4px; }
+.story-info p { color: var(--text-soft); font-size: 0.88rem; line-height: 1.4; }
+.story-meta-row {
+  display: flex; align-items: center; gap: 12px; margin-top: 10px;
+  font-size: 0.82rem; font-weight: 700; color: var(--text-soft);
+}
+.story-pts { color: var(--btn); }
+
+/* Player View */
+.player-view { display: none; }
+.player-view.show { display: block; }
+.list-view.hidden { display: none; }
+
+.player-container {
+  position: relative; background: #000;
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+}
+.player-container video {
+  width: 100%; display: block; max-height: 480px;
+  object-fit: contain; background: #000;
+}
+
+/* Custom video controls */
+.video-controls {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; background: rgba(0,0,0,0.8);
+  position: absolute; bottom: 0; left: 0; right: 0;
+}
+.vc-btn {
+  background: none; border: none; color: white;
+  font-size: 1.4rem; cursor: pointer; padding: 4px;
+}
+.vc-progress {
+  flex: 1; height: 8px; background: rgba(255,255,255,0.2);
+  border-radius: 999px; position: relative; cursor: pointer;
+}
+.vc-progress-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--btn), var(--yellow));
+  transition: width 0.2s;
+}
+.vc-checkpoint {
+  position: absolute; top: -3px; width: 14px; height: 14px;
+  background: var(--yellow); border-radius: 50%;
+  border: 2px solid white; transform: translateX(-50%);
+  z-index: 2;
+}
+.vc-checkpoint.completed { background: var(--green); }
+.vc-time { color: white; font-size: 0.82rem; font-weight: 700; min-width: 80px; text-align: right; }
+
+/* Checkpoint stars */
+.checkpoint-stars {
+  display: flex; justify-content: center; gap: 12px;
+  padding: 16px; background: white; border-radius: 16px;
+  box-shadow: var(--shadow); margin-top: 16px;
+}
+.cp-star {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; background: #F0F4F8; color: #CCC;
+  font-weight: 800; transition: all 0.3s ease;
+}
+.cp-star.active { background: var(--yellow); color: white; transform: scale(1.1); }
+.cp-star.correct { background: var(--green); color: white; }
+.cp-star.wrong { background: #FCA5A5; color: white; }
+
+/* Question Overlay */
+.q-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(255,255,255,0.97);
+  align-items: center; justify-content: center;
+  flex-direction: column; z-index: 20;
+  border-radius: 20px; padding: 30px;
+}
+.q-overlay.show { display: flex; }
+
+.q-overlay-inner {
+  max-width: 560px; width: 100%; text-align: center;
+}
+
+.q-overlay h3 {
+  font-size: 1.5rem; margin-bottom: 8px; color: var(--text);
+}
+.q-overlay .q-subtitle {
+  color: var(--text-soft); margin-bottom: 24px; font-weight: 600;
+}
+
+/* Toddler - big visual options */
+.vq-toddler-opts {
+  display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;
+}
+.vq-toddler-btn {
+  width: 120px; height: 120px; border-radius: 24px;
+  border: 4px solid #E5E7EB; background: white;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; font-size: 3rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.vq-toddler-btn:hover { transform: scale(1.08); border-color: var(--btn); }
+.vq-toddler-btn span { font-size: 0.78rem; font-weight: 800; margin-top: 2px; }
+.vq-toddler-btn.correct { border-color: var(--green); background: #ECFDF5; }
+.vq-toddler-btn.wrong { border-color: #EF4444; background: #FEF2F2; }
+
+/* Explorer/Creator - MCQ cards */
+.vq-mcq-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.vq-mcq-btn {
+  padding: 16px; border-radius: 14px; border: 3px solid #E5E7EB;
+  background: #FAFAFA; font-weight: 700; font-size: 1rem;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+  font-family: 'Nunito', sans-serif;
+}
+.vq-mcq-btn:hover { border-color: var(--btn); background: #FFF0EE; }
+.vq-mcq-btn.correct { border-color: var(--green); background: #ECFDF5; }
+.vq-mcq-btn.wrong { border-color: #EF4444; background: #FEF2F2; }
+
+/* Open-ended */
+.vq-open {
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+.vq-open input {
+  width: 100%; max-width: 400px; padding: 14px 18px;
+  border-radius: 14px; border: 3px solid #E5E7EB;
+  font-size: 1rem; font-family: 'Nunito', sans-serif; font-weight: 600;
+  outline: none;
+}
+.vq-open input:focus { border-color: var(--btn); }
+
+/* Audio cue button (toddler) */
+.audio-cue-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 999px;
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border: 3px solid #F59E0B; font-size: 1.1rem;
+  font-weight: 800; cursor: pointer; margin-bottom: 20px;
+  transition: transform 0.2s;
+}
+.audio-cue-btn:hover { transform: scale(1.05); }
+
+/* Feedback in video */
+.vq-feedback {
+  display: none; text-align: center; padding: 20px;
+}
+.vq-feedback.show { display: block; }
+.vq-feedback .fb-icon { font-size: 4rem; margin-bottom: 8px; }
+.vq-feedback .fb-msg { font-size: 1.2rem; font-weight: 800; margin-bottom: 16px; }
+
+/* Completion screen */
+.completion-screen {
+  display: none; position: absolute; inset: 0;
+  background: linear-gradient(135deg, #ECFDF5, #A7F3D0);
+  align-items: center; justify-content: center;
+  flex-direction: column; z-index: 30;
+  border-radius: 20px; padding: 40px;
+}
+.completion-screen.show { display: flex; }
+.completion-screen h2 { font-size: 2rem; margin-top: 16px; }
+.completion-screen p { color: var(--text-soft); margin: 8px 0 24px; font-weight: 600; font-size: 1.1rem; }
+
+.back-to-list {
+  text-align: center; margin-top: 20px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="vs-page">
+  <div class="vs-header">
+    <div style="font-size:3rem;margin-bottom:8px">📺</div>
+    <h1>Video Stories</h1>
+    <p>Watch, learn, and answer questions along the way!</p>
+  </div>
+
+  <!-- Story List -->
+  <div class="list-view" id="list-view">
+    <div class="story-grid" id="story-grid">
+      <div style="text-align:center;padding:40px;color:var(--text-soft)">Loading stories...</div>
+    </div>
+    <div class="back-to-list">
+      <a href="/dashboard?user_id={{ user_id }}" class="btn btn-secondary btn-sm">← Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Player View -->
+  <div class="player-view" id="player-view">
+    <div class="player-container" id="player-container">
+      <video id="video-player" playsinline>
+        <source id="video-source" src="" type="video/mp4" />
+        Your browser does not support video.
+      </video>
+
+      <!-- Video Controls -->
+      <div class="video-controls" id="video-controls">
+        <button class="vc-btn" id="play-btn" onclick="togglePlay()">▶️</button>
+        <div class="vc-progress" id="progress-bar" onclick="seekVideo(event)">
+          <div class="vc-progress-fill" id="progress-fill"></div>
+        </div>
+        <span class="vc-time" id="time-display">0:00 / 0:00</span>
+      </div>
+
+      <!-- Question Overlay -->
+      <div class="q-overlay" id="q-overlay">
+        <div class="q-overlay-inner" id="q-overlay-inner"></div>
+      </div>
+
+      <!-- Completion Screen -->
+      <div class="completion-screen" id="completion-screen">
+        <div style="font-size:5rem">🎉</div>
+        <h2 id="complete-title">Great Job!</h2>
+        <p id="complete-msg">You finished the video story!</p>
+        <button class="btn btn-primary" onclick="backToList()">Watch Another Story →</button>
+      </div>
+    </div>
+
+    <!-- Checkpoint Stars -->
+    <div class="checkpoint-stars" id="checkpoint-stars"></div>
+
+    <div class="back-to-list">
+      <button class="btn btn-secondary btn-sm" onclick="backToList()">← Back to Stories</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const USER_ID   = {{ user_id | default(0) }};
+  const AGE_GROUP = "{{ age_group | default('creator') }}";
+  const speechSynth = window.speechSynthesis;
+
+  let currentStory = null;
+  let checkpointResults = [];
+  let nextCheckpointIdx = 0;
+  let videoEl, progressFill, timeDisplay;
+
+  // ── Load Story List ───────────────────────────────────────────────
+  async function loadStories() {
+    try {
+      const res = await fetch(`/api/v1/video-story/list?age_group=${AGE_GROUP}&user_id=${USER_ID}`);
+      const data = await res.json();
+      renderStoryList(data.stories);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function renderStoryList(stories) {
+    const grid = document.getElementById('story-grid');
+    if (!stories.length) {
+      grid.innerHTML = '<div style="text-align:center;padding:40px;color:#888">No stories available yet!</div>';
+      return;
+    }
+    grid.innerHTML = stories.map(s => `
+      <div class="story-card" onclick="openStory('${s.id}')">
+        <div class="story-thumb ${s.age_group}">${s.thumbnail}</div>
+        <div class="story-info">
+          <h3>${s.title}</h3>
+          <p>${s.description}</p>
+          <div class="story-meta-row">
+            <span>⏱️ ${s.duration}</span>
+            <span>📝 ${s.checkpoint_count} questions</span>
+            <span class="story-pts">⭐ ${s.total_points} pts</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Open Story Player ─────────────────────────────────────────────
+  async function openStory(storyId) {
+    try {
+      const res = await fetch(`/api/v1/video-story/${storyId}`);
+      currentStory = await res.json();
+      checkpointResults = new Array(currentStory.checkpoints.length).fill(null);
+      nextCheckpointIdx = 0;
+
+      document.getElementById('list-view').classList.add('hidden');
+      document.getElementById('player-view').classList.add('show');
+
+      // Setup video
+      videoEl = document.getElementById('video-player');
+      progressFill = document.getElementById('progress-fill');
+      timeDisplay = document.getElementById('time-display');
+
+      document.getElementById('video-source').src = currentStory.video_url;
+      videoEl.load();
+
+      // Render checkpoint stars
+      renderCheckpointStars();
+
+      // Add checkpoint markers on progress bar
+      videoEl.addEventListener('loadedmetadata', () => {
+        addCheckpointMarkers();
+      });
+
+      // Listen for time update to trigger checkpoints
+      videoEl.addEventListener('timeupdate', checkForCheckpoint);
+
+      videoEl.play();
+      document.getElementById('play-btn').textContent = '⏸️';
+
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function renderCheckpointStars() {
+    const container = document.getElementById('checkpoint-stars');
+    container.innerHTML = currentStory.checkpoints.map((cp, i) => `
+      <div class="cp-star" id="cp-star-${i}" title="Question ${i+1}">
+        ${i + 1}
+      </div>
+    `).join('');
+  }
+
+  function addCheckpointMarkers() {
+    const bar = document.getElementById('progress-bar');
+    // Remove old markers
+    bar.querySelectorAll('.vc-checkpoint').forEach(m => m.remove());
+
+    const duration = videoEl.duration;
+    currentStory.checkpoints.forEach((cp, i) => {
+      const marker = document.createElement('div');
+      marker.className = 'vc-checkpoint';
+      marker.id = `cp-marker-${i}`;
+      marker.style.left = (cp.timestamp / duration * 100) + '%';
+      bar.appendChild(marker);
+    });
+  }
+
+  // ── Video Controls ────────────────────────────────────────────────
+  function togglePlay() {
+    if (videoEl.paused) {
+      videoEl.play();
+      document.getElementById('play-btn').textContent = '⏸️';
+    } else {
+      videoEl.pause();
+      document.getElementById('play-btn').textContent = '▶️';
+    }
+  }
+
+  function seekVideo(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    videoEl.currentTime = pct * videoEl.duration;
+  }
+
+  // Update progress bar
+  setInterval(() => {
+    if (!videoEl || !videoEl.duration) return;
+    const pct = (videoEl.currentTime / videoEl.duration) * 100;
+    if (progressFill) progressFill.style.width = pct + '%';
+    if (timeDisplay) {
+      const cur = formatTime(videoEl.currentTime);
+      const dur = formatTime(videoEl.duration);
+      timeDisplay.textContent = `${cur} / ${dur}`;
+    }
+  }, 250);
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  // ── Checkpoint Detection ──────────────────────────────────────────
+  function checkForCheckpoint() {
+    if (!currentStory || nextCheckpointIdx >= currentStory.checkpoints.length) return;
+
+    const cp = currentStory.checkpoints[nextCheckpointIdx];
+    if (videoEl.currentTime >= cp.timestamp) {
+      videoEl.pause();
+      document.getElementById('play-btn').textContent = '▶️';
+      showCheckpointQuestion(nextCheckpointIdx);
+    }
+  }
+
+  // ── Show Checkpoint Question ──────────────────────────────────────
+  function showCheckpointQuestion(idx) {
+    const cp = currentStory.checkpoints[idx];
+    const overlay = document.getElementById('q-overlay');
+    const inner = document.getElementById('q-overlay-inner');
+
+    // Mark star as active
+    const star = document.getElementById(`cp-star-${idx}`);
+    if (star) star.classList.add('active');
+
+    let html = `<h3>📝 Question ${idx + 1}</h3>`;
+    html += `<p class="q-subtitle">${cp.question_text}</p>`;
+
+    // Audio cue for toddlers
+    if (cp.audio_cue && AGE_GROUP === 'toddler') {
+      html += `<div class="audio-cue-btn" onclick="speakText('${cp.audio_cue.replace(/'/g, "\\'")}')">
+        🔊 Tap to listen!
+      </div>`;
+      setTimeout(() => speakText(cp.audio_cue), 600);
+    }
+
+    // Render options based on type
+    if (cp.question_type === 'audio_visual') {
+      html += '<div class="vq-toddler-opts">';
+      cp.options.forEach((opt, oi) => {
+        const emoji = cp.image_options && cp.image_options[oi] ? cp.image_options[oi] : opt.split(' ')[0];
+        const label = opt.split(' ').slice(1).join(' ') || opt;
+        html += `<div class="vq-toddler-btn" onclick="submitVideoAnswer(${idx}, '${opt.replace(/'/g, "\\'")}', this)">
+          ${emoji}<span>${label}</span>
+        </div>`;
+      });
+      html += '</div>';
+    } else if (cp.question_type === 'open_ended') {
+      html += `<div class="vq-open">
+        <input type="text" id="vq-open-input" placeholder="Type your answer..."
+          onkeydown="if(event.key==='Enter'){submitVideoAnswer(${idx}, document.getElementById('vq-open-input').value, null)}" />
+        <button class="btn btn-primary" onclick="submitVideoAnswer(${idx}, document.getElementById('vq-open-input').value, null)">
+          Submit ✨
+        </button>
+      </div>`;
+    } else {
+      // multiple_choice
+      html += '<div class="vq-mcq-grid">';
+      cp.options.forEach(opt => {
+        html += `<div class="vq-mcq-btn" onclick="submitVideoAnswer(${idx}, '${opt.replace(/'/g, "\\'")}', this)">
+          ${opt}
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Feedback area
+    html += `<div class="vq-feedback" id="vq-feedback">
+      <div class="fb-icon" id="vq-fb-icon"></div>
+      <div class="fb-msg" id="vq-fb-msg"></div>
+      <button class="btn btn-primary" onclick="resumeVideo()" id="vq-continue-btn">
+        ▶️ Continue Watching
+      </button>
+    </div>`;
+
+    inner.innerHTML = html;
+    overlay.classList.add('show');
+  }
+
+  // ── Submit Video Answer ───────────────────────────────────────────
+  async function submitVideoAnswer(idx, answer, el) {
+    // Disable all options
+    document.querySelectorAll('.vq-toddler-btn, .vq-mcq-btn').forEach(b => b.style.pointerEvents = 'none');
+
+    try {
+      const res = await fetch('/api/v1/video-story/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: USER_ID,
+          story_id: currentStory.id,
+          checkpoint_idx: idx,
+          answer: answer,
+        })
+      });
+      const data = await res.json();
+      checkpointResults[idx] = data.correct;
+
+      // Update star
+      const star = document.getElementById(`cp-star-${idx}`);
+      if (star) {
+        star.classList.remove('active');
+        star.classList.add(data.correct ? 'correct' : 'wrong');
+        star.textContent = data.correct ? '⭐' : '✗';
+      }
+
+      // Mark checkpoint marker
+      const marker = document.getElementById(`cp-marker-${idx}`);
+      if (marker) marker.classList.toggle('completed', data.correct);
+
+      // Visual feedback on clicked element
+      if (el) el.classList.add(data.correct ? 'correct' : 'wrong');
+
+      // Show feedback
+      const fbArea = document.getElementById('vq-feedback');
+      document.getElementById('vq-fb-icon').textContent = data.correct ? '🎉' : '💪';
+      document.getElementById('vq-fb-msg').textContent = data.feedback;
+      fbArea.classList.add('show');
+
+      if (data.correct && AGE_GROUP === 'toddler') speakText('Yay! Great job!');
+      if (data.points_earned > 0) notifyPoints(data.points_earned);
+
+    } catch (e) {
+      console.error(e);
+    }
+
+    nextCheckpointIdx = idx + 1;
+  }
+
+  // ── Resume Video ──────────────────────────────────────────────────
+  function resumeVideo() {
+    document.getElementById('q-overlay').classList.remove('show');
+
+    // Check if all checkpoints done
+    if (nextCheckpointIdx >= currentStory.checkpoints.length) {
+      // Check if video is near end
+      videoEl.addEventListener('ended', showCompletion);
+    }
+
+    videoEl.play();
+    document.getElementById('play-btn').textContent = '⏸️';
+  }
+
+  // ── Completion ────────────────────────────────────────────────────
+  function showCompletion() {
+    videoEl.pause();
+    const correct = checkpointResults.filter(r => r === true).length;
+    const total = checkpointResults.length;
+
+    document.getElementById('complete-title').textContent =
+      correct === total ? '🌟 Perfect Score!' : '🎉 Great Job!';
+    document.getElementById('complete-msg').textContent =
+      `You got ${correct}/${total} questions right!`;
+
+    document.getElementById('completion-screen').classList.add('show');
+
+    // Award completion bonus
+    fetch(`/api/v1/video-story/complete?story_id=${currentStory.id}&user_id=${USER_ID}`, {
+      method: 'POST'
+    });
+  }
+
+  // Also trigger completion when video ends naturally
+  document.addEventListener('DOMContentLoaded', () => {
+    const v = document.getElementById('video-player');
+    if (v) v.addEventListener('ended', showCompletion);
+  });
+
+  // ── Back to List ──────────────────────────────────────────────────
+  function backToList() {
+    document.getElementById('player-view').classList.remove('show');
+    document.getElementById('list-view').classList.remove('hidden');
+    document.getElementById('q-overlay').classList.remove('show');
+    document.getElementById('completion-screen').classList.remove('show');
+
+    // Cleanup
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.removeEventListener('timeupdate', checkForCheckpoint);
+      videoEl.removeEventListener('ended', showCompletion);
+    }
+    currentStory = null;
+  }
+
+  // ── Speech ────────────────────────────────────────────────────────
+  function speakText(text) {
+    if (!speechSynth) return;
+    speechSynth.cancel();
+    const utter = new SpeechSynthesisUtterance(text.replace(/[^\w\s!?.,]/g, ''));
+    utter.rate = 0.85;
+    utter.pitch = 1.3;
+    utter.lang = 'en-US';
+    speechSynth.speak(utter);
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────
+  loadStories();
+</script>
+{% endblock %}

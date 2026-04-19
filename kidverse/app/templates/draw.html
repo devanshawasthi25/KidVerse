@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% block title %}Draw & Create — KidVerse{% endblock %}
+
+{% block extra_styles %}
+.draw-wrapper {
+  max-width: 900px; margin: 24px auto; padding: 0 16px 80px;
+}
+.draw-header { text-align:center; margin-bottom:20px; }
+.draw-header h2 { font-size:2rem; }
+.draw-header p  { color:var(--text-soft); font-weight:600; }
+
+.draw-layout {
+  display: grid; grid-template-columns: 1fr 220px; gap: 20px;
+  align-items: start;
+}
+@media(max-width:680px) {
+  .draw-layout { grid-template-columns: 1fr; }
+}
+
+/* Canvas */
+.canvas-wrap {
+  background: white; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); overflow: hidden; position: relative;
+}
+#draw-canvas {
+  display: block; cursor: crosshair;
+  width: 100%; touch-action: none;
+  border-radius: var(--radius-lg);
+}
+
+/* Toolbar */
+.toolbar {
+  background: white; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); padding: 20px 16px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.tool-section-title {
+  font-size: 0.78rem; font-weight: 800; color: var(--text-soft);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.color-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+}
+.color-swatch {
+  width: 100%; aspect-ratio:1; border-radius: 8px;
+  cursor: pointer; border: 3px solid transparent;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.active { border-color: var(--text); transform: scale(1.1); }
+
+.custom-color-row {
+  display: flex; align-items: center; gap: 8px;
+}
+#color-picker {
+  width: 36px; height: 36px; border: none; border-radius: 8px;
+  cursor: pointer; padding: 0; overflow: hidden;
+}
+
+.size-slider {
+  width: 100%; accent-color: var(--btn);
+}
+.size-preview-wrap {
+  display: flex; align-items: center; justify-content: center;
+  height: 36px;
+}
+.size-preview {
+  background: var(--text); border-radius: 50%;
+  transition: width 0.1s, height 0.1s;
+}
+
+.tool-btns {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.tool-btn {
+  padding: 9px 6px; border-radius: var(--radius);
+  font-size: 0.82rem; font-weight: 800; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s ease;
+  font-family: 'Nunito', sans-serif;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.tool-btn.active { border-color: var(--btn); background: #FFF0EE; }
+.tool-btn:hover   { background: var(--surface); }
+.tool-btn span.icon { font-size: 1.3rem; }
+
+.action-btns { display: flex; flex-direction: column; gap: 8px; }
+
+/* Save success banner */
+.save-banner {
+  display: none; background: #EDFFF2; border-radius: var(--radius);
+  padding: 12px 16px; text-align: center; font-weight: 700;
+  color: #2E7D32; border: 2px solid var(--green);
+}
+.save-banner.show { display: block; }
+{% endblock %}
+
+{% block content %}
+<div class="draw-wrapper">
+  <div class="draw-header">
+    <div style="font-size:3rem;margin-bottom:8px">🎨</div>
+    <h2>Draw & Create</h2>
+    <p>Express yourself — your imagination is the only limit!</p>
+  </div>
+
+  <div class="draw-layout">
+    <!-- Canvas -->
+    <div class="canvas-wrap">
+      <canvas id="draw-canvas" width="640" height="460"></canvas>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+
+      <!-- Tools -->
+      <div>
+        <div class="tool-section-title">🛠 Tool</div>
+        <div class="tool-btns" style="margin-top:8px">
+          <button class="tool-btn active" id="tool-pen"    onclick="setTool('pen')">
+            <span class="icon">✏️</span>Pen
+          </button>
+          <button class="tool-btn"        id="tool-eraser" onclick="setTool('eraser')">
+            <span class="icon">🧹</span>Eraser
+          </button>
+          <button class="tool-btn"        id="tool-fill"   onclick="setTool('fill')">
+            <span class="icon">🪣</span>Fill
+          </button>
+          <button class="tool-btn"        id="tool-line"   onclick="setTool('line')">
+            <span class="icon">📏</span>Line
+          </button>
+        </div>
+      </div>
+
+      <!-- Colors -->
+      <div>
+        <div class="tool-section-title">🎨 Color</div>
+        <div class="color-grid" style="margin-top:8px" id="color-grid">
+          <div class="color-swatch active" style="background:#2F2F2F" onclick="setColor('#2F2F2F',this)"></div>
+          <div class="color-swatch" style="background:#EF4444" onclick="setColor('#EF4444',this)"></div>
+          <div class="color-swatch" style="background:#F97316" onclick="setColor('#F97316',this)"></div>
+          <div class="color-swatch" style="background:#EAB308" onclick="setColor('#EAB308',this)"></div>
+          <div class="color-swatch" style="background:#22C55E" onclick="setColor('#22C55E',this)"></div>
+          <div class="color-swatch" style="background:#3B82F6" onclick="setColor('#3B82F6',this)"></div>
+          <div class="color-swatch" style="background:#8B5CF6" onclick="setColor('#8B5CF6',this)"></div>
+          <div class="color-swatch" style="background:#EC4899" onclick="setColor('#EC4899',this)"></div>
+          <div class="color-swatch" style="background:#FFFFFF;border:2px solid #ddd" onclick="setColor('#FFFFFF',this)"></div>
+          <div class="color-swatch" style="background:#C7EDE6" onclick="setColor('#C7EDE6',this)"></div>
+        </div>
+        <div class="custom-color-row" style="margin-top:10px">
+          <input type="color" id="color-picker" value="#2F2F2F" oninput="setCustomColor(this.value)" />
+          <span style="font-size:0.82rem;font-weight:700;color:var(--text-soft)">Custom</span>
+        </div>
+      </div>
+
+      <!-- Brush Size -->
+      <div>
+        <div class="tool-section-title">🖌 Brush Size</div>
+        <div class="size-preview-wrap" style="margin-top:6px">
+          <div class="size-preview" id="size-preview" style="width:6px;height:6px"></div>
+        </div>
+        <input type="range" class="size-slider" id="size-slider"
+               min="1" max="40" value="6" oninput="setSize(this.value)" />
+      </div>
+
+      <!-- Actions -->
+      <div class="action-btns">
+        <button class="btn btn-primary btn-sm" onclick="saveDrawing()">💾 Save Drawing</button>
+        <button class="btn btn-secondary btn-sm" onclick="undoLast()">↩️ Undo</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearCanvas()">🗑 Clear</button>
+        <a href="/dashboard/{{ user_id }}" class="btn btn-secondary btn-sm">← Dashboard</a>
+      </div>
+
+      <div class="save-banner" id="save-banner">
+        🎉 Masterpiece saved!<br>+10 points!
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const USER_ID   = {{ user_id | default(0) }};
+  const AGE_GROUP = "{{ age_group | default('creator') }}";
+
+  // Toddler mode: bigger default brush + simpler UI on load
+  document.addEventListener('DOMContentLoaded', () => {
+    if (AGE_GROUP === 'toddler') {
+      // Bigger brush for tiny hands
+      setSize(18);
+      document.getElementById('size-slider') && (document.getElementById('size-slider').value = 18);
+      // Hide advanced tools (fill, line) for toddlers
+      ['tool-fill','tool-line'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    }
+    if (AGE_GROUP === 'explorer') {
+      setSize(10);
+      document.getElementById('size-slider') && (document.getElementById('size-slider').value = 10);
+    }
+  });
+  const canvas  = document.getElementById('draw-canvas');
+  const ctx     = canvas.getContext('2d');
+
+  // State
+  let painting   = false;
+  let currentTool  = 'pen';
+  let currentColor = '#2F2F2F';
+  let currentSize  = 6;
+  let history      = [];
+  let lineStart    = null;
+  let snapshot     = null;
+
+  // Fill canvas with white
+  function initCanvas() {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    saveHistory();
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return {
+      x: (src.clientX - rect.left) * scaleX,
+      y: (src.clientY - rect.top)  * scaleY,
+    };
+  }
+
+  // ── Drawing ──────────────────────────────────────────────────────────────────
+  function startDraw(e) {
+    e.preventDefault();
+    painting = true;
+    const pos = getPos(e);
+    if (currentTool === 'fill') { floodFill(Math.round(pos.x), Math.round(pos.y)); return; }
+    if (currentTool === 'line') { lineStart = pos; snapshot = ctx.getImageData(0,0,canvas.width,canvas.height); return; }
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function draw(e) {
+    e.preventDefault();
+    if (!painting) return;
+    const pos = getPos(e);
+    if (currentTool === 'line') {
+      ctx.putImageData(snapshot, 0, 0);
+      ctx.beginPath();
+      ctx.moveTo(lineStart.x, lineStart.y);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth   = currentSize;
+      ctx.lineCap     = 'round';
+      ctx.stroke();
+      return;
+    }
+    ctx.lineWidth   = currentSize;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.strokeStyle = currentTool === 'eraser' ? '#FFFFFF' : currentColor;
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  }
+
+  function endDraw(e) {
+    e.preventDefault();
+    if (!painting) return;
+    painting = false;
+    ctx.beginPath();
+    saveHistory();
+  }
+
+  canvas.addEventListener('mousedown',  startDraw);
+  canvas.addEventListener('mousemove',  draw);
+  canvas.addEventListener('mouseup',    endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, { passive:false });
+  canvas.addEventListener('touchmove',  draw,      { passive:false });
+  canvas.addEventListener('touchend',   endDraw,   { passive:false });
+
+  // ── Tools / Colors / Size ────────────────────────────────────────────────────
+  function setTool(t) {
+    currentTool = t;
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tool-${t}`).classList.add('active');
+  }
+
+  function setColor(hex, el) {
+    currentColor = hex;
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    if (el) el.classList.add('active');
+    document.getElementById('color-picker').value = hex;
+    if (currentTool === 'eraser') setTool('pen');
+  }
+
+  function setCustomColor(hex) {
+    currentColor = hex;
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    if (currentTool === 'eraser') setTool('pen');
+  }
+
+  function setSize(v) {
+    currentSize = parseInt(v);
+    const px = Math.max(4, Math.min(40, currentSize));
+    const el = document.getElementById('size-preview');
+    el.style.width  = px + 'px';
+    el.style.height = px + 'px';
+  }
+
+  // ── Flood Fill ───────────────────────────────────────────────────────────────
+  function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return [r,g,b,255];
+  }
+
+  function floodFill(startX, startY) {
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const data = imgData.data;
+    const w = canvas.width;
+    const h = canvas.height;
+    const idx = (startY * w + startX) * 4;
+    const targetColor = [data[idx], data[idx+1], data[idx+2], data[idx+3]];
+    const fillColor   = hexToRgb(currentColor);
+    if (targetColor.every((v,i) => v === fillColor[i])) return;
+
+    const stack = [[startX, startY]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= w || y < 0 || y >= h) continue;
+      const i = (y * w + x) * 4;
+      if (!data.slice(i,i+4).every((v,k) => v === targetColor[k])) continue;
+      data[i]=fillColor[0]; data[i+1]=fillColor[1]; data[i+2]=fillColor[2]; data[i+3]=255;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+    ctx.putImageData(imgData, 0, 0);
+    saveHistory();
+  }
+
+  // ── History ──────────────────────────────────────────────────────────────────
+  function saveHistory() {
+    history.push(canvas.toDataURL());
+    if (history.length > 30) history.shift();
+  }
+
+  function undoLast() {
+    if (history.length <= 1) return;
+    history.pop();
+    const img = new Image();
+    img.src = history[history.length - 1];
+    img.onload = () => ctx.drawImage(img, 0, 0);
+  }
+
+  function clearCanvas() {
+    if (!confirm('Clear the whole canvas? This cannot be undone!')) return;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    saveHistory();
+  }
+
+  // ── Save ─────────────────────────────────────────────────────────────────────
+  async function saveDrawing() {
+    const imageData = canvas.toDataURL('image/png');
+    try {
+      const res = await fetch('/api/v1/drawing/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_data: imageData, title: 'My Drawing', user_id: USER_ID })
+      });
+      const data = await res.json();
+      const banner = document.getElementById('save-banner');
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 3500);
+      notifyPoints(data.points_earned || 0);
+
+      // Also trigger browser download
+      const link = document.createElement('a');
+      link.download = 'kidverse-drawing.png';
+      link.href = imageData;
+      link.click();
+    } catch (e) {
+      showToast('Oops! Could not save. Try again!', '😅');
+    }
+  }
+
+  initCanvas();
+  setSize(6);
+</script>
+{% endblock %}

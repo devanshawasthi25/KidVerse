@@ -1,0 +1,710 @@
+{% extends "base.html" %}
+{% block title %}Play & Learn — KidVerse 🌟{% endblock %}
+
+{% block extra_styles %}
+* { box-sizing: border-box; }
+body { overflow-x: hidden; }
+
+/* ── Hub Layout ── */
+.hub-wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px 80px; }
+
+.hub-header {
+  text-align: center; padding: 24px 0 20px;
+}
+.hub-header h1 { font-size: clamp(1.8rem,5vw,2.6rem); margin-bottom: 6px; }
+.hub-header p  { color: var(--text-soft); font-size: 1rem; font-weight: 600; }
+
+/* ── World Grid ── */
+.world-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr));
+  gap: 16px; margin-bottom: 28px;
+}
+.world-btn {
+  border: none; border-radius: 20px; padding: 22px 10px 18px;
+  cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-family: 'Nunito', sans-serif;
+}
+.world-btn:hover  { transform: translateY(-6px) scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+.world-btn:active { transform: scale(0.97); }
+.world-btn .w-icon { font-size: 3rem; line-height: 1; }
+.world-btn .w-name { font-size: 0.95rem; font-weight: 900; }
+.world-btn .w-tag  { font-size: 0.72rem; font-weight: 700; opacity: .75; }
+
+.w-animals { background: linear-gradient(135deg,#fef3c7,#fde68a); color: #92400e; }
+.w-colors  { background: linear-gradient(135deg,#fce7f3,#fbcfe8); color: #9d174d; }
+.w-shapes  { background: linear-gradient(135deg,#d1fae5,#a7f3d0); color: #065f46; }
+.w-numbers { background: linear-gradient(135deg,#dbeafe,#bfdbfe); color: #1e3a8a; }
+.w-abc     { background: linear-gradient(135deg,#ede9fe,#ddd6fe); color: #4c1d95; }
+.w-story   { background: linear-gradient(135deg,#fee2e2,#fecaca); color: #7f1d1d; }
+
+/* ── Activity Panel ── */
+.activity-panel {
+  background: white; border-radius: 24px;
+  box-shadow: 0 4px 30px rgba(0,0,0,.10);
+  padding: 24px; min-height: 360px;
+  display: none;
+}
+.activity-panel.active { display: block; }
+
+.panel-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+}
+.panel-back {
+  border: none; background: #f3f4f6; border-radius: 999px;
+  padding: 8px 16px; cursor: pointer; font-weight: 800;
+  font-family: 'Nunito',sans-serif; font-size: 0.9rem;
+  transition: background .15s;
+}
+.panel-back:hover { background: #e5e7eb; }
+.panel-title { font-size: 1.4rem; font-weight: 900; }
+
+/* ── Animal World ── */
+.animal-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(100px,1fr));
+  gap: 12px;
+}
+.animal-card {
+  background: #fffbeb; border: 3px solid #fde68a; border-radius: 18px;
+  padding: 16px 8px; text-align: center; cursor: pointer;
+  transition: transform .2s ease, border-color .2s;
+  user-select: none;
+}
+.animal-card:hover  { transform: scale(1.08); border-color: #f59e0b; }
+.animal-card.bounce { animation: abounce .4s ease; }
+@keyframes abounce {
+  0%,100%{transform:scale(1)} 40%{transform:scale(1.25) rotate(-4deg)} 70%{transform:scale(0.95)}
+}
+.animal-card .ac-emoji { font-size: 2.8rem; display: block; margin-bottom: 4px; }
+.animal-card .ac-name  { font-size: 0.8rem; font-weight: 900; color: #92400e; }
+.animal-card .ac-sound { font-size: 0.7rem; color: #b45309; margin-top: 2px; }
+
+/* ── Color Garden ── */
+.color-canvas-wrap { text-align: center; }
+.color-blob-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-bottom: 18px; }
+.color-blob {
+  width: 80px; height: 80px; border-radius: 50%;
+  cursor: pointer; border: 4px solid transparent;
+  transition: transform .2s, box-shadow .2s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0; font-weight: 900;
+}
+.color-blob:hover  { transform: scale(1.18); box-shadow: 0 6px 20px rgba(0,0,0,.2); }
+.color-blob.active { border-color: #1f2937; font-size: 1.6rem; transform: scale(1.22); }
+#color-splash {
+  width: 100%; height: 180px; border-radius: 20px;
+  transition: background 0.5s ease; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 900; color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+/* ── Shape Kingdom ── */
+.shape-game { text-align: center; }
+.shape-question {
+  font-size: 1.1rem; font-weight: 800; margin-bottom: 18px; color: #374151;
+}
+.shape-choices {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
+  margin-bottom: 20px;
+}
+.shape-opt {
+  width: 90px; height: 90px; background: #f9fafb;
+  border: 3px solid #d1d5db; border-radius: 16px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .2s; font-size: 0;
+}
+.shape-opt:hover      { border-color: #6366f1; background: #eef2ff; transform: scale(1.08); }
+.shape-opt.correct    { border-color: #22c55e; background: #dcfce7; animation: pop .4s ease; }
+.shape-opt.wrong      { border-color: #ef4444; background: #fee2e2; animation: shake .3s ease; }
+@keyframes pop   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+.shape-score { font-size: 1.2rem; font-weight: 900; color: #7c3aed; }
+
+/* ── Number Land ── */
+.number-game { text-align: center; }
+.number-display {
+  font-size: 5rem; font-weight: 900; color: #1d4ed8;
+  margin: 10px 0; line-height: 1; cursor: pointer;
+  transition: transform .2s;
+  display: inline-block;
+}
+.number-display:hover { transform: scale(1.1); }
+.dot-grid {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 10px; margin: 16px auto; max-width: 340px;
+}
+.dot {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #bfdbfe; border: 3px solid #3b82f6;
+  cursor: pointer; transition: all .2s; font-size: 1.4rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.dot.tapped { background: #2563eb; transform: scale(1.2); }
+.dot.tapped::after { content: "✓"; color: white; font-weight: 900; font-size: 1rem; }
+.num-nav { display: flex; justify-content: center; gap: 16px; margin-top: 16px; }
+.num-btn {
+  border: none; border-radius: 999px;
+  padding: 10px 28px; font-size: 1rem; font-weight: 900;
+  cursor: pointer; font-family: 'Nunito',sans-serif;
+  transition: transform .15s;
+}
+.num-btn:hover { transform: scale(1.06); }
+.num-prev { background: #f3f4f6; color: #374151; }
+.num-next { background: #1d4ed8; color: white; }
+
+/* ── ABC World ── */
+.abc-game { text-align: center; }
+.abc-letter {
+  font-size: 7rem; font-weight: 900; color: #7c3aed;
+  line-height: 1; cursor: pointer; display: inline-block;
+  transition: transform .2s; user-select: none;
+}
+.abc-letter:hover { transform: scale(1.12) rotate(-3deg); }
+.abc-word-pic { font-size: 5rem; margin: 8px 0; }
+.abc-word { font-size: 1.8rem; font-weight: 900; color: #374151; letter-spacing: .1em; }
+.abc-word .hl { color: #7c3aed; }
+.abc-nav { display: flex; justify-content: center; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
+.abc-nav button {
+  border: none; border-radius: 999px; width: 40px; height: 40px;
+  font-size: 0.85rem; font-weight: 900; cursor: pointer;
+  font-family: 'Nunito',sans-serif; transition: transform .15s;
+  background: #ede9fe; color: #4c1d95;
+}
+.abc-nav button:hover  { transform: scale(1.12); background: #ddd6fe; }
+.abc-nav button.cur   { background: #7c3aed; color: white; transform: scale(1.1); }
+
+/* ── Story Time ── */
+.story-panel { text-align: center; }
+.story-hero { font-size: 5rem; margin-bottom: 10px; display: block; animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.story-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 6px; }
+.story-text {
+  background: #f9fafb; border-radius: 16px; padding: 18px 20px;
+  font-size: 1.1rem; line-height: 1.8; text-align: left;
+  border-left: 5px solid #f97316; margin-bottom: 18px;
+  color: #374151;
+}
+.story-controls { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.story-btn {
+  border: none; border-radius: 999px; padding: 12px 28px;
+  font-size: 1rem; font-weight: 900; cursor: pointer;
+  font-family: 'Nunito',sans-serif; transition: transform .15s;
+}
+.story-btn:hover  { transform: scale(1.06); }
+.story-read   { background: #f97316; color: white; }
+.story-next   { background: #7c3aed; color: white; }
+.story-replay { background: #22c55e; color: white; }
+
+/* ── Stars Reward ── */
+.star-burst {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  pointer-events: none; z-index: 9999; display: none;
+}
+.star-particle {
+  position: absolute; font-size: 2rem;
+  animation: starfall 1.2s ease-out forwards;
+}
+@keyframes starfall {
+  0%   { opacity:1; transform: translateY(0) scale(1) rotate(0deg); }
+  100% { opacity:0; transform: translateY(160px) scale(0.3) rotate(360deg); }
+}
+
+/* ── Progress Bar ── */
+.progress-row {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border-radius: 999px; padding: 10px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08); margin-bottom: 20px;
+}
+.stars-count { font-size: 1.1rem; font-weight: 900; color: #f59e0b; white-space: nowrap; }
+.prog-bar-bg { flex: 1; height: 12px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+.prog-bar-fill { height: 100%; background: linear-gradient(90deg,#f59e0b,#f97316); border-radius: 999px; transition: width .6s ease; }
+.level-badge {
+  background: #fef3c7; color: #92400e; border-radius: 999px;
+  padding: 4px 14px; font-size: 0.82rem; font-weight: 900; white-space: nowrap;
+}
+{% endblock %}
+
+{% block content %}
+<div class="hub-wrap">
+
+  <div class="hub-header">
+    <h1>🌟 Hello, {{ user_name }}! Let's Play!</h1>
+    <p>Tap a world to start learning!</p>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-row">
+    <span class="stars-count">⭐ <span id="star-count">0</span> stars</span>
+    <div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    <span class="level-badge" id="level-badge">Explorer Cub 🐣</span>
+  </div>
+
+  <!-- World selector -->
+  <div id="world-selector">
+    <div class="world-grid">
+      <button class="world-btn w-animals" onclick="openWorld('animals')">
+        <span class="w-icon">🐘</span>
+        <span class="w-name">Animals</span>
+        <span class="w-tag">Tap &amp; Hear!</span>
+      </button>
+      <button class="world-btn w-colors" onclick="openWorld('colors')">
+        <span class="w-icon">🌈</span>
+        <span class="w-name">Colors</span>
+        <span class="w-tag">Paint &amp; Learn!</span>
+      </button>
+      <button class="world-btn w-shapes" onclick="openWorld('shapes')">
+        <span class="w-icon">🔷</span>
+        <span class="w-name">Shapes</span>
+        <span class="w-tag">Match &amp; Win!</span>
+      </button>
+      <button class="world-btn w-numbers" onclick="openWorld('numbers')">
+        <span class="w-icon">🔢</span>
+        <span class="w-name">Numbers</span>
+        <span class="w-tag">Count &amp; Tap!</span>
+      </button>
+      <button class="world-btn w-abc" onclick="openWorld('abc')">
+        <span class="w-icon">🔤</span>
+        <span class="w-name">A B C</span>
+        <span class="w-tag">Letters!</span>
+      </button>
+      <button class="world-btn w-story" onclick="openWorld('story')">
+        <span class="w-icon">📖</span>
+        <span class="w-name">Stories</span>
+        <span class="w-tag">Listen &amp; Dream!</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ANIMAL WORLD ── -->
+  <div class="activity-panel" id="panel-animals">
+    <div class="panel-header">
+      <button class="panel-back" onclick="closeWorld()">← Back</button>
+      <span class="panel-title">🐘 Animal World</span>
+    </div>
+    <div class="animal-grid" id="animal-grid"></div>
+  </div>
+
+  <!-- ── COLOR GARDEN ── -->
+  <div class="activity-panel" id="panel-colors">
+    <div class="panel-header">
+      <button class="panel-back" onclick="closeWorld()">← Back</button>
+      <span class="panel-title">🌈 Color Garden</span>
+    </div>
+    <div class="color-canvas-wrap">
+      <div id="color-splash" style="background:#f9fafb; color:#9ca3af">
+        Tap a color below!
+      </div>
+      <div class="color-blob-row" id="color-blobs" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- ── SHAPE KINGDOM ── -->
+  <div class="activity-panel" id="panel-shapes">
+    <div class="panel-header">
+      <button class="panel-back" onclick="closeWorld()">← Back</button>
+      <span class="panel-title">🔷 Shape Kingdom</span>
+    </div>
+    <div class="shape-game">
+      <div class="shape-question" id="shape-q"></div>
+      <div class="shape-choices" id="shape-choices"></div>
+      <div class="shape-score">⭐ <span id="shape-score">0</span> correct!</div>
+    </div>
+  </div>
+
+  <!-- ── NUMBER LAND ── -->
+  <div class="activity-panel" id="panel-numbers">
+    <div class="panel-header">
+      <button class="panel-back" onclick="closeWorld()">← Back</button>
+      <span class="panel-title">🔢 Number Land</span>
+    </div>
+    <div class="number-game">
+      <div class="number-display" id="num-display" onclick="speakNumber()">1</div>
+      <p style="color:#64748b;font-weight:700;margin:4px 0 12px">Tap each dot to count!</p>
+      <div class="dot-grid" id="dot-grid"></div>
+      <div class="num-nav">
+        <button class="num-btn num-prev" onclick="changeNumber(-1)">◀ Back</button>
+        <button class="num-btn num-next" onclick="changeNumber(1)">Next ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ABC WORLD ── -->
+  <div class="activity-panel" id="panel-abc">
+    <div class="panel-header">
+      <button class="panel-back" onclick="closeWorld()">← Back</button>
+      <span class="panel-title">🔤 ABC World</span>
+    </div>
+    <div class="abc-game">
+      <div class="abc-letter" id="abc-letter" onclick="speakLetter()">A</div>
+      <div class="abc-word-pic" id="abc-pic">🍎</div>
+      <div class="abc-word" id="abc-word"><span class="hl">A</span>pple</div>
+      <p style="color:#6b7280;font-size:0.9rem;font-weight:700">Tap the letter to hear it!</p>
+      <div class="abc-nav" id="abc-nav"></div>
+    </div>
+  </div>
+
+  <!-- ── STORY TIME ── -->
+  <div class="activity-panel" id="panel-story">
+    <div class="panel-header">
+      <button class="panel-back" onclick="closeWorld()">← Back</button>
+      <span class="panel-title">📖 Story Time</span>
+    </div>
+    <div class="story-panel">
+      <span class="story-hero" id="story-hero">🐰</span>
+      <div class="story-title" id="story-title">Loading story...</div>
+      <div class="story-text" id="story-text">Once upon a time...</div>
+      <div class="story-controls">
+        <button class="story-btn story-read" onclick="readStoryAloud()">🔊 Read Aloud</button>
+        <button class="story-btn story-next" onclick="nextStory()">📖 New Story</button>
+        <button class="story-btn story-replay" onclick="readStoryAloud()">🔄 Again!</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Star burst overlay -->
+<div class="star-burst" id="star-burst"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const USER_ID  = {{ user_id | default(0) }};
+let totalStars = 0;
+let shapeScore = 0;
+let currentNum = 1;
+let currentABC = 0;
+let currentStory = 0;
+let speechVoice = null;
+
+// ── Speech Setup ────────────────────────────────────────────────────────────
+function speak(text, rate=0.85, pitch=1.15) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate  = rate;
+  u.pitch = pitch;
+  u.volume = 1;
+  if (speechVoice) u.voice = speechVoice;
+  window.speechSynthesis.speak(u);
+}
+
+window.speechSynthesis?.addEventListener('voiceschanged', () => {
+  const voices = window.speechSynthesis.getVoices();
+  speechVoice = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google UK') ||
+    v.lang === 'en-US') || voices[0];
+});
+
+// ── Stars ───────────────────────────────────────────────────────────────────
+function addStars(n) {
+  totalStars += n;
+  document.getElementById('star-count').textContent = totalStars;
+  const pct = Math.min((totalStars / 50) * 100, 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  const levels = [
+    [0,'Explorer Cub 🐣'],[10,'Baby Star ⭐'],[20,'Curious Pup 🐶'],
+    [35,'Wonder Kid 🦋'],[50,'Super Cosmo 🚀']
+  ];
+  const lv = levels.filter(l => totalStars >= l[0]).pop();
+  document.getElementById('level-badge').textContent = lv[1];
+  showStarBurst(n);
+  if (USER_ID) {
+    fetch(`/api/v1/toddler/stars`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: USER_ID, stars: n})
+    }).catch(()=>{});
+  }
+}
+
+function showStarBurst(n) {
+  const el = document.getElementById('star-burst');
+  el.innerHTML = '';
+  el.style.display = 'block';
+  for (let i = 0; i < Math.min(n * 5, 20); i++) {
+    const s = document.createElement('div');
+    s.className = 'star-particle';
+    s.textContent = ['⭐','🌟','✨','💫'][i%4];
+    s.style.left  = Math.random()*90 + 'vw';
+    s.style.top   = Math.random()*60 + 'vh';
+    s.style.animationDelay = (Math.random()*0.4) + 's';
+    el.appendChild(s);
+  }
+  setTimeout(() => { el.style.display='none'; el.innerHTML=''; }, 1600);
+}
+
+// ── World Navigation ─────────────────────────────────────────────────────────
+function openWorld(name) {
+  document.getElementById('world-selector').style.display = 'none';
+  document.querySelectorAll('.activity-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'animals') initAnimals();
+  if (name === 'colors')  initColors();
+  if (name === 'shapes')  initShapes();
+  if (name === 'numbers') initNumbers();
+  if (name === 'abc')     initABC();
+  if (name === 'story')   initStory();
+}
+function closeWorld() {
+  window.speechSynthesis?.cancel();
+  document.querySelectorAll('.activity-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('world-selector').style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🐘  ANIMAL WORLD
+// ══════════════════════════════════════════════════════════════════════════════
+const ANIMALS = [
+  {e:'🐱',n:'Cat',s:'Meow!'},     {e:'🐶',n:'Dog',s:'Woof!'},
+  {e:'🐸',n:'Frog',s:'Ribbit!'},  {e:'🐄',n:'Cow',s:'Moo!'},
+  {e:'🦆',n:'Duck',s:'Quack!'},   {e:'🐘',n:'Elephant',s:'Trumpet!'},
+  {e:'🦁',n:'Lion',s:'Roar!'},    {e:'🐰',n:'Bunny',s:'Squeak!'},
+  {e:'🐧',n:'Penguin',s:'Squawk!'},{e:'🐷',n:'Pig',s:'Oink!'},
+  {e:'🐮',n:'Calf',s:'Moo!'},     {e:'🐻',n:'Bear',s:'Growl!'},
+  {e:'🦊',n:'Fox',s:'Yip!'},      {e:'🐼',n:'Panda',s:'Squeak!'},
+  {e:'🐯',n:'Tiger',s:'Roar!'},   {e:'🦜',n:'Parrot',s:'Hello!'},
+];
+
+function initAnimals() {
+  const grid = document.getElementById('animal-grid');
+  grid.innerHTML = '';
+  ANIMALS.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'animal-card';
+    card.innerHTML = `<span class="ac-emoji">${a.e}</span>
+      <div class="ac-name">${a.n}</div>
+      <div class="ac-sound">"${a.s}"</div>`;
+    card.onclick = () => {
+      card.classList.remove('bounce');
+      void card.offsetWidth;
+      card.classList.add('bounce');
+      speak(`${a.n}! ${a.s}`, 0.8, 1.3);
+      addStars(1);
+    };
+    grid.appendChild(card);
+  });
+  speak('Welcome to Animal World! Tap an animal to hear it!', 0.82, 1.1);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🌈  COLOR GARDEN
+// ══════════════════════════════════════════════════════════════════════════════
+const COLORS = [
+  {n:'Red',    h:'#ef4444',e:'🍎'}, {n:'Orange', h:'#f97316',e:'🍊'},
+  {n:'Yellow', h:'#eab308',e:'🌟'}, {n:'Green',  h:'#22c55e',e:'🌿'},
+  {n:'Blue',   h:'#3b82f6',e:'🫐'}, {n:'Purple', h:'#a855f7',e:'🍇'},
+  {n:'Pink',   h:'#ec4899',e:'🌸'}, {n:'Brown',  h:'#a16207',e:'🐻'},
+  {n:'White',  h:'#f3f4f6',e:'⚪'}, {n:'Black',  h:'#1f2937',e:'⚫'},
+];
+
+function initColors() {
+  const wrap = document.getElementById('color-blobs');
+  wrap.innerHTML = '';
+  COLORS.forEach(c => {
+    const b = document.createElement('div');
+    b.className = 'color-blob';
+    b.style.background = c.h;
+    b.title = c.n;
+    b.onclick = () => {
+      document.querySelectorAll('.color-blob').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      b.textContent = c.e;
+      const splash = document.getElementById('color-splash');
+      splash.style.background = c.h;
+      splash.textContent = c.n + '!';
+      splash.style.color = (c.n==='White'||c.n==='Yellow') ? '#374151' : 'white';
+      speak(`${c.n}! ${c.e === '⚪' ? '' : c.n}`, 0.8, 1.2);
+      addStars(1);
+    };
+    wrap.appendChild(b);
+  });
+  speak('Welcome to Color Garden! Tap a color bubble!', 0.82, 1.1);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔷  SHAPE KINGDOM
+// ══════════════════════════════════════════════════════════════════════════════
+const SHAPES = [
+  {n:'Circle',  svg:'<circle cx="45" cy="45" r="38" fill="#3b82f6"/>'},
+  {n:'Square',  svg:'<rect x="8" y="8" width="74" height="74" fill="#22c55e"/>'},
+  {n:'Triangle',svg:'<polygon points="45,8 84,82 6,82" fill="#f97316"/>'},
+  {n:'Star',    svg:'<polygon points="45,5 57,35 90,35 63,57 74,88 45,68 16,88 27,57 0,35 33,35" fill="#eab308"/>'},
+  {n:'Heart',   svg:'<path d="M45,75 C45,75 10,55 10,30 A20,20,0,0,1,45,22 A20,20,0,0,1,80,30 C80,55 45,75 45,75Z" fill="#ec4899"/>'},
+  {n:'Diamond', svg:'<polygon points="45,5 85,45 45,85 5,45" fill="#a855f7"/>'},
+];
+
+let shapeAnswer = '';
+function initShapes() { nextShapeQuestion(); speak('Welcome to Shape Kingdom! Find the right shape!', 0.82, 1.1); }
+function nextShapeQuestion() {
+  const correct = SHAPES[Math.floor(Math.random()*SHAPES.length)];
+  shapeAnswer = correct.n;
+  document.getElementById('shape-q').textContent = `Which one is the ${correct.n}?`;
+  speak(`Which one is the ${correct.n}?`, 0.8, 1.1);
+
+  // shuffle 4 options always including correct
+  let opts = [correct];
+  const others = SHAPES.filter(s=>s.n!==correct.n);
+  while(opts.length < 4) {
+    const r = others[Math.floor(Math.random()*others.length)];
+    if (!opts.find(o=>o.n===r.n)) opts.push(r);
+  }
+  opts = opts.sort(()=>Math.random()-.5);
+
+  const container = document.getElementById('shape-choices');
+  container.innerHTML = '';
+  opts.forEach(s => {
+    const btn = document.createElement('div');
+    btn.className = 'shape-opt';
+    btn.innerHTML = `<svg viewBox="0 0 90 90" width="60" height="60">${s.svg}</svg>`;
+    btn.onclick = () => {
+      if (s.n === shapeAnswer) {
+        btn.classList.add('correct');
+        speak('Yay! Correct! Well done!', 0.85, 1.3);
+        shapeScore++;
+        document.getElementById('shape-score').textContent = shapeScore;
+        addStars(2);
+        setTimeout(nextShapeQuestion, 1200);
+      } else {
+        btn.classList.add('wrong');
+        speak('Oops! Try again!', 0.85, 1.0);
+        setTimeout(()=>btn.classList.remove('wrong'), 500);
+      }
+    };
+    container.appendChild(btn);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔢  NUMBER LAND
+// ══════════════════════════════════════════════════════════════════════════════
+const NUM_EMOJIS = ['','🍎','🍊🍊','🐱🐱🐱','🌟🌟🌟🌟','🐶🐶🐶🐶🐶',
+  '🎈🎈🎈🎈🎈🎈','🦆🦆🦆🦆🦆🦆🦆','🍭🍭🍭🍭🍭🍭🍭🍭',
+  '🌈🌈🌈🌈🌈🌈🌈🌈🌈','⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐'];
+
+function initNumbers() {
+  currentNum = 1;
+  renderNumber();
+  speak('Welcome to Number Land! Tap the number to hear it!', 0.82, 1.1);
+}
+function renderNumber() {
+  document.getElementById('num-display').textContent = currentNum;
+  const grid = document.getElementById('dot-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < currentNum; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.textContent = NUM_EMOJIS[currentNum][i*2] || '●';
+    d.style.fontSize = '1.6rem';
+    d.onclick = () => {
+      if (!d.classList.contains('tapped')) {
+        d.classList.add('tapped');
+        d.textContent = '';
+        speak(String(Array.from(grid.querySelectorAll('.dot.tapped')).length), 0.8, 1.3);
+        if (grid.querySelectorAll('.dot.tapped').length === currentNum) {
+          setTimeout(()=>speak(`You counted to ${currentNum}! Great job!`,0.82,1.2), 300);
+          addStars(2);
+        }
+      }
+    };
+    grid.appendChild(d);
+  }
+}
+function speakNumber() { speak(String(currentNum), 0.7, 1.3); }
+function changeNumber(d) {
+  currentNum = Math.max(1, Math.min(10, currentNum + d));
+  renderNumber();
+  speak(String(currentNum), 0.75, 1.2);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔤  ABC WORLD
+// ══════════════════════════════════════════════════════════════════════════════
+const ABC_DATA = [
+  {l:'A',w:'Apple',p:'🍎'},    {l:'B',w:'Ball',p:'⚽'},
+  {l:'C',w:'Cat',p:'🐱'},      {l:'D',w:'Dog',p:'🐶'},
+  {l:'E',w:'Elephant',p:'🐘'}, {l:'F',w:'Fish',p:'🐟'},
+  {l:'G',w:'Grapes',p:'🍇'},   {l:'H',w:'Hat',p:'🎩'},
+  {l:'I',w:'Ice cream',p:'🍦'},{l:'J',w:'Juice',p:'🥤'},
+  {l:'K',w:'Kite',p:'🪁'},     {l:'L',w:'Lion',p:'🦁'},
+  {l:'M',w:'Moon',p:'🌙'},     {l:'N',w:'Nest',p:'🪺'},
+  {l:'O',w:'Orange',p:'🍊'},   {l:'P',w:'Penguin',p:'🐧'},
+  {l:'Q',w:'Queen',p:'👑'},    {l:'R',w:'Rainbow',p:'🌈'},
+  {l:'S',w:'Star',p:'⭐'},     {l:'T',w:'Tree',p:'🌳'},
+  {l:'U',w:'Umbrella',p:'☂️'}, {l:'V',w:'Violin',p:'🎻'},
+  {l:'W',w:'Whale',p:'🐳'},    {l:'X',w:'Xylophone',p:'🎵'},
+  {l:'Y',w:'Yak',p:'🐃'},      {l:'Z',w:'Zebra',p:'🦓'},
+];
+
+function initABC() {
+  currentABC = 0;
+  const nav = document.getElementById('abc-nav');
+  nav.innerHTML = '';
+  ABC_DATA.forEach((d,i) => {
+    const btn = document.createElement('button');
+    btn.textContent = d.l;
+    btn.onclick = () => { currentABC = i; renderABC(); speak(`${d.l}. ${d.w}`, 0.78, 1.2); };
+    nav.appendChild(btn);
+  });
+  renderABC();
+  speak('Welcome to ABC World! Tap a letter!', 0.82, 1.1);
+}
+function renderABC() {
+  const d = ABC_DATA[currentABC];
+  document.getElementById('abc-letter').textContent = d.l;
+  document.getElementById('abc-pic').textContent    = d.p;
+  document.getElementById('abc-word').innerHTML =
+    `<span class="hl">${d.l}</span>${d.w.slice(1)}`;
+  document.querySelectorAll('#abc-nav button').forEach((b,i) =>
+    b.classList.toggle('cur', i === currentABC));
+}
+function speakLetter() {
+  const d = ABC_DATA[currentABC];
+  speak(`${d.l}. ${d.w}`, 0.78, 1.3);
+  addStars(1);
+  currentABC = (currentABC + 1) % ABC_DATA.length;
+  setTimeout(renderABC, 600);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📖  STORY TIME
+// ══════════════════════════════════════════════════════════════════════════════
+const STORIES = [
+  { hero:'🐰', title:'Benny Finds a Friend',
+    text:`Benny the bunny was lonely in the big green meadow. He hopped and hopped but couldn't find anyone to play with. Then he saw a little yellow duck stuck in the mud! Benny pulled and pulled until the duck was free. "Thank you!" quacked the duck. "My name is Daisy!" From that day on, Benny and Daisy played together every single day. The end! 🌸` },
+  { hero:'🐻', title:'Bear and the Honey Jar',
+    text:`Little Bear loved honey more than anything in the world. One sunny morning he found a big honey jar in the forest. But it was stuck inside a log! Bear pushed and pulled. Then a tiny mouse came by. "I can help!" said Mouse. Together they tilted the log and out rolled the jar. Bear shared the honey with Mouse, and it tasted sweeter than ever. The end! 🍯` },
+  { hero:'🌟', title:'The Little Star Who Was Scared',
+    text:`High up in the sky lived a tiny star named Twinkle. Every night the other stars would shine brightly, but Twinkle was too scared. "What if no one sees me?" Twinkle worried. Then a little child looked up and said, "Mama, that star is the prettiest!" Twinkle glowed so bright that night. From then on, Twinkle shone every single night with a happy heart. The end! ✨` },
+  { hero:'🐠', title:'Finn the Fish Who Danced',
+    text:`Finn was a little orange fish who loved to dance. But all the other fish just swam in straight lines. One day a big wave came and tumbled everyone around! All the fish swam every which way. "This is fun!" they said. Finn laughed and laughed. After that, all the fish danced together in the sea. The ocean was full of happy swirls. The end! 🌊` },
+  { hero:'🦋', title:'Bella Becomes a Butterfly',
+    text:`Bella the caterpillar loved eating leaves. She ate and ate until she was very full. Then she wrapped herself in a cozy blanket and fell asleep. When she woke up, she had beautiful wings! She flew over flowers, over trees, over rivers. "Hello world!" she called out. And the whole garden called back, "Hello Bella!" The end! 🌺` },
+];
+
+function initStory() {
+  currentStory = Math.floor(Math.random() * STORIES.length);
+  renderStory();
+  speak('Welcome to Story Time! Press Read Aloud to hear your story!', 0.82, 1.1);
+}
+function renderStory() {
+  const s = STORIES[currentStory];
+  document.getElementById('story-hero').textContent  = s.hero;
+  document.getElementById('story-title').textContent = s.title;
+  document.getElementById('story-text').textContent  = s.text;
+}
+function readStoryAloud() {
+  const s = STORIES[currentStory];
+  speak(s.title + '. ' + s.text.replace(/[🌸🍯✨🌊🌺]/g,''), 0.78, 1.05);
+  addStars(3);
+}
+function nextStory() {
+  window.speechSynthesis?.cancel();
+  currentStory = (currentStory + 1) % STORIES.length;
+  renderStory();
+  setTimeout(readStoryAloud, 400);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+speak('Hello! Welcome to KidVerse! Tap a world to start playing!', 0.8, 1.1);
+</script>
+{% endblock %}

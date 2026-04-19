@@ -1,0 +1,587 @@
+{% extends "base.html" %}
+{% block title %}Login — KidVerse 🌟{% endblock %}
+
+{% block extra_styles %}
+.auth-page {
+  min-height: calc(100vh - 80px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #F7F9F4 0%, #EAF3FF 50%, #C7EDE6 100%);
+}
+
+.auth-container {
+  width: 100%; max-width: 480px;
+  position: relative;
+}
+
+.auth-card {
+  background: white; border-radius: 28px;
+  box-shadow: 0 12px 60px rgba(0,0,0,0.10);
+  padding: 44px 38px 36px;
+  animation: cardSlideUp 0.5s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes cardSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.auth-logo {
+  text-align: center; margin-bottom: 28px;
+}
+.auth-logo .emoji { font-size: 3.5rem; display: block; margin-bottom: 8px; }
+.auth-logo h1 { font-size: 2rem; color: var(--text); }
+.auth-logo p  { color: var(--text-soft); font-size: 0.95rem; margin-top: 4px; }
+
+/* Tab Switcher */
+.auth-tabs {
+  display: flex; gap: 4px; background: #F0F4F8;
+  border-radius: 14px; padding: 4px; margin-bottom: 28px;
+}
+.auth-tab {
+  flex: 1; padding: 12px; text-align: center;
+  border-radius: 11px; font-weight: 800; font-size: 0.95rem;
+  cursor: pointer; transition: all 0.2s ease;
+  border: none; background: transparent; color: var(--text-soft);
+  font-family: 'Nunito', sans-serif;
+}
+.auth-tab.active {
+  background: white; color: var(--btn);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Form Styles */
+.auth-form { display: flex; flex-direction: column; gap: 16px; }
+.auth-form.hidden { display: none; }
+
+.field-group { position: relative; }
+.field-label {
+  display: block; font-weight: 800; font-size: 0.88rem;
+  color: var(--text); margin-bottom: 6px;
+}
+.field-icon {
+  position: absolute; left: 16px; top: 39px;
+  font-size: 1.2rem; pointer-events: none;
+}
+.field-input {
+  width: 100%; padding: 14px 16px 14px 44px;
+  border: 2px solid #E5E7EB; border-radius: 14px;
+  font-size: 1rem; font-family: 'Nunito', sans-serif;
+  font-weight: 600; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field-input:focus {
+  border-color: var(--btn);
+  box-shadow: 0 0 0 4px rgba(255,154,139,0.15);
+}
+.field-input.error { border-color: #EF4444; }
+
+.field-input-no-icon {
+  width: 100%; padding: 14px 16px;
+  border: 2px solid #E5E7EB; border-radius: 14px;
+  font-size: 1rem; font-family: 'Nunito', sans-serif;
+  font-weight: 600; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field-input-no-icon:focus {
+  border-color: var(--btn);
+  box-shadow: 0 0 0 4px rgba(255,154,139,0.15);
+}
+
+/* Age group selector */
+.age-selector {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.age-option {
+  border: 2px solid #E5E7EB; border-radius: 12px;
+  padding: 12px 6px; text-align: center;
+  cursor: pointer; transition: all 0.2s ease;
+  background: #FAFAFA;
+}
+.age-option:hover { border-color: #A5B4FC; transform: translateY(-2px); }
+.age-option.selected {
+  border-color: var(--btn); background: #FFF0EE;
+  box-shadow: 0 3px 12px rgba(244,132,95,0.2);
+}
+.age-option .age-emoji { font-size: 1.5rem; display: block; }
+.age-option .age-label { font-weight: 800; font-size: 0.82rem; margin-top: 2px; }
+.age-option .age-range { font-size: 0.72rem; color: var(--text-soft); font-weight: 600; }
+
+/* Avatar picker */
+.avatar-row {
+  display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+}
+.avatar-pick {
+  font-size: 1.8rem; cursor: pointer; padding: 8px;
+  border-radius: 50%; border: 3px solid transparent;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.avatar-pick:hover { transform: scale(1.15); }
+.avatar-pick.selected { border-color: var(--btn); background: #FFF0EE; }
+
+/* Submit Button */
+.auth-submit {
+  width: 100%; padding: 16px; border: none;
+  border-radius: 16px; font-size: 1.1rem;
+  font-family: 'Nunito', sans-serif; font-weight: 800;
+  cursor: pointer; transition: all 0.2s ease;
+  background: linear-gradient(135deg, var(--btn), #FF7A68);
+  color: white; margin-top: 8px;
+  box-shadow: 0 4px 15px rgba(255,122,104,0.3);
+}
+.auth-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(255,122,104,0.4);
+}
+.auth-submit:active { transform: translateY(0); }
+.auth-submit:disabled {
+  opacity: 0.6; cursor: not-allowed; transform: none;
+}
+
+.auth-error {
+  background: #FEF2F2; border: 1px solid #FECACA;
+  border-radius: 12px; padding: 12px 16px;
+  color: #DC2626; font-weight: 700; font-size: 0.9rem;
+  text-align: center; display: none;
+}
+.auth-error.show { display: block; }
+
+.auth-success {
+  background: #ECFDF5; border: 1px solid #A7F3D0;
+  border-radius: 12px; padding: 12px 16px;
+  color: #059669; font-weight: 700; font-size: 0.9rem;
+  text-align: center; display: none;
+}
+.auth-success.show { display: block; }
+
+/* OTP Modal */
+.otp-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(47,47,47,0.5); z-index: 6000;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.otp-overlay.show { display: flex; }
+
+.otp-card {
+  background: white; border-radius: 28px;
+  padding: 44px 38px; max-width: 420px; width: 90%;
+  box-shadow: 0 16px 80px rgba(0,0,0,0.15);
+  text-align: center;
+  animation: cardSlideUp 0.4s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.otp-card h2 { font-size: 1.7rem; margin-bottom: 8px; }
+.otp-card p  { color: var(--text-soft); font-size: 0.95rem; margin-bottom: 24px; }
+
+.otp-inputs {
+  display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;
+}
+.otp-digit {
+  width: 52px; height: 60px;
+  border: 2px solid #E5E7EB; border-radius: 14px;
+  font-size: 1.5rem; font-weight: 900; text-align: center;
+  font-family: 'Nunito', sans-serif; outline: none;
+  transition: border-color 0.2s;
+}
+.otp-digit:focus { border-color: var(--btn); }
+
+.resend-link {
+  color: var(--text-soft); font-size: 0.88rem;
+  font-weight: 700; margin-top: 12px;
+}
+.resend-link button {
+  background: none; border: none; color: var(--btn);
+  font-weight: 800; cursor: pointer; font-family: inherit;
+  font-size: inherit;
+}
+.resend-link button:hover { text-decoration: underline; }
+
+/* Decorative elements */
+.floating-emoji {
+  position: absolute; font-size: 2rem; opacity: 0.15;
+  animation: floatUp 12s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-20px) rotate(10deg); }
+}
+
+.password-toggle {
+  position: absolute; right: 14px; top: 39px;
+  background: none; border: none; font-size: 1.2rem;
+  cursor: pointer; color: var(--text-soft); padding: 4px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <!-- Floating decorative emojis -->
+  <span class="floating-emoji" style="top:10%;left:8%;animation-delay:0s">🌟</span>
+  <span class="floating-emoji" style="top:20%;right:12%;animation-delay:2s">🚀</span>
+  <span class="floating-emoji" style="bottom:15%;left:15%;animation-delay:4s">🎨</span>
+  <span class="floating-emoji" style="bottom:25%;right:8%;animation-delay:6s">📖</span>
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="emoji">🌟</span>
+        <h1>KidVerse</h1>
+        <p>Your magical learning adventure awaits!</p>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">🔑 Login</button>
+        <button class="auth-tab" onclick="switchAuthTab('signup')">✨ Sign Up</button>
+      </div>
+
+      <!-- Error/Success Messages -->
+      <div class="auth-error" id="auth-error"></div>
+      <div class="auth-success" id="auth-success"></div>
+
+      <!-- LOGIN FORM -->
+      <form class="auth-form" id="login-form" onsubmit="handleLogin(event)">
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <span class="field-icon">📧</span>
+          <input class="field-input" type="email" id="login-email"
+                 placeholder="parent@email.com" required autocomplete="email" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <span class="field-icon">🔒</span>
+          <input class="field-input" type="password" id="login-password"
+                 placeholder="Enter password" required autocomplete="current-password" />
+          <button type="button" class="password-toggle" onclick="togglePassword('login-password', this)">👁️</button>
+        </div>
+        <button class="auth-submit" type="submit" id="login-btn">
+          🚀 Login to KidVerse
+        </button>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form class="auth-form hidden" id="signup-form" onsubmit="handleSignup(event)">
+        <div class="field-group">
+          <label class="field-label">Child's Name</label>
+          <span class="field-icon">👤</span>
+          <input class="field-input" type="text" id="signup-name"
+                 placeholder="What's your name?" maxlength="30" required />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Parent's Email</label>
+          <span class="field-icon">📧</span>
+          <input class="field-input" type="email" id="signup-email"
+                 placeholder="parent@email.com" required autocomplete="email" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Phone (Optional)</label>
+          <span class="field-icon">📱</span>
+          <input class="field-input" type="tel" id="signup-phone"
+                 placeholder="+91 9876543210" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Create Password</label>
+          <span class="field-icon">🔒</span>
+          <input class="field-input" type="password" id="signup-password"
+                 placeholder="Min. 6 characters" required minlength="6" />
+          <button type="button" class="password-toggle" onclick="togglePassword('signup-password', this)">👁️</button>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Age Group</label>
+          <div class="age-selector">
+            <div class="age-option" data-val="toddler" onclick="selectAge(this)">
+              <span class="age-emoji">👶</span>
+              <span class="age-label">Toddler</span>
+              <span class="age-range">Ages 1–5</span>
+            </div>
+            <div class="age-option selected" data-val="explorer" onclick="selectAge(this)">
+              <span class="age-emoji">🧒</span>
+              <span class="age-label">Explorer</span>
+              <span class="age-range">Ages 5–9</span>
+            </div>
+            <div class="age-option" data-val="creator" onclick="selectAge(this)">
+              <span class="age-emoji">🧑</span>
+              <span class="age-label">Creator</span>
+              <span class="age-range">Ages 10–14</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Pick an Avatar</label>
+          <div class="avatar-row">
+            <span class="avatar-pick selected" data-val="star"   onclick="selectAvatarAuth(this)">⭐</span>
+            <span class="avatar-pick"          data-val="rocket" onclick="selectAvatarAuth(this)">🚀</span>
+            <span class="avatar-pick"          data-val="dragon" onclick="selectAvatarAuth(this)">🐉</span>
+            <span class="avatar-pick"          data-val="uni"    onclick="selectAvatarAuth(this)">🦄</span>
+            <span class="avatar-pick"          data-val="robot"  onclick="selectAvatarAuth(this)">🤖</span>
+            <span class="avatar-pick"          data-val="cat"    onclick="selectAvatarAuth(this)">🐱</span>
+          </div>
+        </div>
+
+        <button class="auth-submit" type="submit" id="signup-btn">
+          ✨ Create My Account
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- OTP Verification Modal -->
+<div class="otp-overlay" id="otp-modal">
+  <div class="otp-card">
+    <div style="font-size:3.5rem;margin-bottom:12px">📧</div>
+    <h2>Verify Your Email</h2>
+    <p>We sent a 6-digit code to <strong id="otp-email-display"></strong></p>
+
+    <!-- Dev mode OTP banner -->
+    <div id="dev-otp-banner" style="display:none;background:linear-gradient(135deg,#FEF3C7,#FDE68A);
+      border:2px solid #F59E0B;border-radius:14px;padding:14px 20px;margin-bottom:16px;">
+      <div style="font-weight:800;font-size:0.82rem;color:#92400E;margin-bottom:4px;">⚠️ DEV MODE — No email configured</div>
+      <div style="font-family:'Fredoka One',cursive;font-size:2rem;letter-spacing:6px;color:#D97706;" id="dev-otp-code"></div>
+      <div style="font-size:0.78rem;color:#92400E;margin-top:4px;">Set SMTP_USER & SMTP_PASSWORD in .env for real emails</div>
+    </div>
+
+    <div class="auth-error" id="otp-error" style="margin-bottom:16px"></div>
+    <div class="auth-success" id="otp-success" style="margin-bottom:16px"></div>
+
+    <div class="otp-inputs" id="otp-inputs">
+      <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+    </div>
+
+    <button class="auth-submit" onclick="verifyOTP()" id="verify-btn" style="max-width:280px;margin:0 auto">
+      ✅ Verify Code
+    </button>
+
+    <div class="resend-link">
+      Didn't receive the code?
+      <button onclick="resendOTP()">Resend OTP</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let selectedAge    = 'explorer';
+  let selectedAvatar = 'star';
+  let pendingEmail   = '';
+
+  // ── Tab Switching ────────────────────────────────────────────────
+  function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.auth-tab:nth-child(${tab === 'login' ? 1 : 2})`).classList.add('active');
+    document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('signup-form').classList.toggle('hidden', tab !== 'signup');
+    clearMessages();
+  }
+
+  // ── Selectors ────────────────────────────────────────────────────
+  function selectAge(el) {
+    document.querySelectorAll('.age-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedAge = el.dataset.val;
+  }
+
+  function selectAvatarAuth(el) {
+    document.querySelectorAll('.avatar-pick').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedAvatar = el.dataset.val;
+  }
+
+  function togglePassword(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁️'; }
+  }
+
+  // ── Messages ─────────────────────────────────────────────────────
+  function showError(msg, id = 'auth-error') {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 6000);
+  }
+  function showSuccess(msg, id = 'auth-success') {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 6000);
+  }
+  function clearMessages() {
+    document.querySelectorAll('.auth-error, .auth-success').forEach(el => el.classList.remove('show'));
+  }
+
+  // ── Login ────────────────────────────────────────────────────────
+  async function handleLogin(e) {
+    e.preventDefault();
+    clearMessages();
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = '⏳ Logging in...';
+
+    try {
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('login-email').value.trim(),
+          password: document.getElementById('login-password').value,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Login failed');
+
+      // Store user in localStorage
+      localStorage.setItem('kidverse_user_id', data.user_id);
+      localStorage.setItem('kidverse_user_name', data.name);
+      localStorage.setItem('kidverse_age_group', data.age_group);
+
+      showSuccess('Welcome back, ' + data.name + '! 🎉');
+      setTimeout(() => {
+        window.location.href = `/world?user_id=${data.user_id}`;
+      }, 800);
+    } catch (err) {
+      showError(err.message);
+    }
+    btn.disabled = false; btn.textContent = '🚀 Login to KidVerse';
+  }
+
+  // ── Signup ───────────────────────────────────────────────────────
+  async function handleSignup(e) {
+    e.preventDefault();
+    clearMessages();
+    const btn = document.getElementById('signup-btn');
+    btn.disabled = true; btn.textContent = '⏳ Creating account...';
+
+    const email = document.getElementById('signup-email').value.trim();
+    try {
+      const res = await fetch('/api/v1/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:      document.getElementById('signup-name').value.trim(),
+          email:     email,
+          password:  document.getElementById('signup-password').value,
+          phone:     document.getElementById('signup-phone').value.trim() || null,
+          age_group: selectedAge,
+          avatar:    selectedAvatar,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Signup failed');
+
+      // Store for later
+      localStorage.setItem('kidverse_user_id', data.user_id);
+      localStorage.setItem('kidverse_user_name', data.name);
+      localStorage.setItem('kidverse_age_group', data.age_group);
+
+      // Show OTP modal
+      pendingEmail = email;
+      document.getElementById('otp-email-display').textContent = email;
+      document.getElementById('otp-modal').classList.add('show');
+
+      // Dev mode: auto-fill OTP if returned by server
+      if (data.dev_otp) {
+        autoFillOTP(data.dev_otp);
+      } else {
+        // Focus first OTP digit
+        setTimeout(() => document.querySelector('.otp-digit').focus(), 300);
+      }
+
+    } catch (err) {
+      showError(err.message);
+    }
+    btn.disabled = false; btn.textContent = '✨ Create My Account';
+  }
+
+  // ── OTP Input Navigation ────────────────────────────────────────
+  document.querySelectorAll('.otp-digit').forEach((inp, i, all) => {
+    inp.addEventListener('input', (e) => {
+      if (e.target.value && i < all.length - 1) all[i + 1].focus();
+      // Auto-verify if all filled
+      const code = Array.from(all).map(d => d.value).join('');
+      if (code.length === 6) verifyOTP();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) all[i - 1].focus();
+    });
+    inp.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const paste = (e.clipboardData || window.clipboardData).getData('text').trim();
+      if (/^\d{6}$/.test(paste)) {
+        paste.split('').forEach((ch, j) => { if (all[j]) all[j].value = ch; });
+        verifyOTP();
+      }
+    });
+  });
+
+  // ── Verify OTP ──────────────────────────────────────────────────
+  async function verifyOTP() {
+    const digits = document.querySelectorAll('.otp-digit');
+    const code = Array.from(digits).map(d => d.value).join('');
+    if (code.length !== 6) { showError('Please enter all 6 digits', 'otp-error'); return; }
+
+    const btn = document.getElementById('verify-btn');
+    btn.disabled = true; btn.textContent = '⏳ Verifying...';
+
+    try {
+      const res = await fetch('/api/v1/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingEmail, otp_code: code })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Verification failed');
+
+      showSuccess('Email verified! Redirecting... 🎉', 'otp-success');
+      setTimeout(() => {
+        window.location.href = `/world?user_id=${data.user_id}`;
+      }, 1200);
+    } catch (err) {
+      showError(err.message, 'otp-error');
+      // Clear inputs
+      digits.forEach(d => d.value = '');
+      digits[0].focus();
+    }
+    btn.disabled = false; btn.textContent = '✅ Verify Code';
+  }
+
+  // ── Resend OTP ──────────────────────────────────────────────────
+  async function resendOTP() {
+    try {
+      const res = await fetch('/api/v1/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingEmail })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      if (data.dev_otp) {
+        autoFillOTP(data.dev_otp);
+      } else {
+        showSuccess('New code sent! Check your email', 'otp-success');
+      }
+    } catch (err) {
+      showError(err.message, 'otp-error');
+    }
+  }
+
+  // ── Auto-fill OTP (Dev Mode) ────────────────────────────────────
+  function autoFillOTP(otp) {
+    // Show dev banner with OTP
+    const banner = document.getElementById('dev-otp-banner');
+    document.getElementById('dev-otp-code').textContent = otp;
+    banner.style.display = 'block';
+
+    // Auto-fill the digit inputs
+    const digits = document.querySelectorAll('.otp-digit');
+    otp.split('').forEach((ch, i) => { if (digits[i]) digits[i].value = ch; });
+
+    showSuccess('OTP auto-filled! Click Verify to continue.', 'otp-success');
+  }
+</script>
+{% endblock %}

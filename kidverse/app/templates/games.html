@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+{% block title %}🎮 Game Arena — KidVerse{% endblock %}
+
+{% block extra_styles %}
+body { overflow: hidden; background: #000; }
+.navbar { display: none; }
+.focus-toggle { display: none; }
+
+#arena-canvas {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+}
+
+/* ── Game HUD ─────────────────────────────────────────────────── */
+.game-hud {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; z-index: 200; pointer-events: none;
+}
+.game-hud > * { pointer-events: all; }
+
+.ghud-left, .ghud-right { display: flex; align-items: center; gap: 12px; }
+
+.ghud-back {
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 12px; padding: 10px 16px;
+  color: white; font-weight: 800; cursor: pointer;
+  font-family: 'Nunito', sans-serif; font-size: 0.88rem;
+  text-decoration: none; transition: all 0.2s;
+}
+.ghud-back:hover { background: rgba(255,255,255,0.15); }
+
+.ghud-stat {
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 10px 18px;
+  color: white; display: flex; align-items: center; gap: 8px;
+  font-weight: 800; font-size: 0.95rem;
+}
+.ghud-val {
+  font-family: 'Fredoka One', cursive; font-size: 1.4rem;
+  color: #FFD166;
+}
+.ghud-val.streak { color: #FF6B6B; }
+.ghud-val.qnum { color: #C9B8FF; }
+
+/* ── Question Overlay ─────────────────────────────────────────── */
+.q-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.3); backdrop-filter: blur(6px);
+  padding: 20px;
+}
+
+.q-card {
+  background: rgba(15,15,30,0.85); backdrop-filter: blur(20px);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 28px; padding: 36px 34px;
+  max-width: 560px; width: 100%;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+  position: relative; overflow: hidden;
+  animation: cardPop 0.4s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes cardPop {
+  from { transform: scale(0.85) translateY(30px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.q-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #FF9A8B, #FFD166, #6BCB77, #C9B8FF);
+}
+
+.q-emoji-big {
+  text-align: center; font-size: 4rem; margin-bottom: 12px;
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.q-difficulty {
+  text-align: center; margin-bottom: 10px;
+}
+.q-diff-badge {
+  display: inline-block; padding: 4px 16px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+}
+.q-diff-easy   { background: rgba(107,203,119,0.2); color: #6BCB77; border: 1px solid rgba(107,203,119,0.3); }
+.q-diff-medium { background: rgba(255,209,102,0.2); color: #FFD166; border: 1px solid rgba(255,209,102,0.3); }
+.q-diff-hard   { background: rgba(255,107,107,0.2); color: #FF6B6B; border: 1px solid rgba(255,107,107,0.3); }
+
+.q-text {
+  color: white; font-size: 1.35rem; font-weight: 800;
+  text-align: center; margin-bottom: 28px;
+  line-height: 1.5; text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Toddler: Big visual buttons */
+.opts-toddler {
+  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+}
+.opt-t {
+  width: 130px; height: 130px; border-radius: 24px;
+  border: 3px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; font-size: 3.5rem;
+  backdrop-filter: blur(8px);
+}
+.opt-t span {
+  font-size: 0.85rem; font-weight: 800; color: rgba(255,255,255,0.9); margin-top: 4px;
+}
+.opt-t:hover {
+  border-color: #FF9A8B; background: rgba(255,154,139,0.15);
+  transform: scale(1.08);
+}
+.opt-t.correct { border-color: #6BCB77; background: rgba(107,203,119,0.2); }
+.opt-t.wrong { border-color: #FF6B6B; background: rgba(255,107,107,0.2); animation: shake 0.5s; }
+
+/* Explorer/Creator: Glass cards */
+.opts-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.opt-g {
+  padding: 18px; border-radius: 16px;
+  border: 2px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(8px);
+  color: white; font-weight: 700; font-size: 1.05rem;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.opt-g:hover {
+  border-color: #FF9A8B; background: rgba(255,154,139,0.1);
+  transform: translateY(-2px);
+}
+.opt-g.correct { border-color: #6BCB77; background: rgba(107,203,119,0.2); }
+.opt-g.wrong { border-color: #FF6B6B; background: rgba(255,107,107,0.2); animation: shake 0.5s; }
+
+/* Open-ended */
+.open-area {
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+.open-inp {
+  width: 100%; max-width: 400px; padding: 16px 20px;
+  border-radius: 16px; border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06); backdrop-filter: blur(8px);
+  color: white; font-size: 1.05rem; font-family: 'Nunito', sans-serif;
+  font-weight: 600; outline: none;
+}
+.open-inp:focus { border-color: #FF9A8B; }
+.open-inp::placeholder { color: rgba(255,255,255,0.4); }
+
+.submit-btn {
+  background: linear-gradient(135deg, #FF9A8B, #FF7A68);
+  border: none; border-radius: 999px; padding: 12px 32px;
+  color: white; font-weight: 800; font-size: 1rem;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  transition: transform 0.2s; box-shadow: 0 4px 20px rgba(255,122,104,0.4);
+}
+.submit-btn:hover { transform: scale(1.05); }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-8px); }
+  75%      { transform: translateX(8px); }
+}
+
+/* Audio cue */
+.audio-cue {
+  text-align: center; margin-bottom: 20px;
+}
+.audio-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 999px;
+  background: rgba(255,209,102,0.2); border: 2px solid rgba(255,209,102,0.3);
+  color: #FFD166; font-weight: 800; font-size: 1rem;
+  cursor: pointer; transition: transform 0.2s;
+}
+.audio-btn:hover { transform: scale(1.05); }
+
+/* Timer */
+.timer-wrap {
+  width: 100%; height: 6px; background: rgba(255,255,255,0.1);
+  border-radius: 999px; margin-bottom: 20px; overflow: hidden;
+}
+.timer-bar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #6BCB77, #FFD166, #FF6B6B);
+  transition: width 0.1s linear;
+}
+
+/* Feedback */
+.fb-overlay {
+  position: absolute; inset: 0; border-radius: 28px;
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px; z-index: 10;
+  background: rgba(15,15,30,0.95); backdrop-filter: blur(12px);
+  padding: 30px;
+}
+.fb-overlay.show { display: flex; }
+.fb-icon { font-size: 5rem; }
+.fb-text { color: white; font-size: 1.3rem; font-weight: 800; text-align: center; max-width: 380px; }
+.next-btn {
+  background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 999px; padding: 12px 28px;
+  color: white; font-weight: 800; cursor: pointer;
+  font-family: 'Nunito', sans-serif; font-size: 1rem;
+  transition: all 0.2s;
+}
+.next-btn:hover { background: rgba(255,255,255,0.2); }
+
+/* Confetti */
+.confetti-box { position: fixed; inset: 0; pointer-events: none; z-index: 9999; overflow: hidden; }
+.conf-piece {
+  position: absolute; width: 10px; height: 10px; top: -10px;
+  border-radius: 2px; animation: confFall 3s ease-in forwards;
+}
+@keyframes confFall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+
+/* Leaderboard */
+.lb-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  z-index: 5000; align-items: center; justify-content: center;
+}
+.lb-modal.show { display: flex; }
+.lb-card {
+  background: rgba(15,15,30,0.9); backdrop-filter: blur(20px);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 24px; padding: 32px; max-width: 420px; width: 90%;
+}
+.lb-card h2 { color: white; text-align: center; margin-bottom: 20px; }
+.lb-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 12px; margin-bottom: 6px;
+  font-weight: 700; color: white;
+}
+.lb-top { background: rgba(255,209,102,0.15); }
+.lb-item .rank { font-size: 1.3rem; min-width: 32px; text-align: center; }
+.lb-item .avatar { font-size: 1.4rem; }
+.lb-item .name { flex: 1; }
+.lb-item .pts { color: #FFD166; font-family: 'Fredoka One', cursive; }
+{% endblock %}
+
+{% block content %}
+<!-- 3D Arena Canvas -->
+<canvas id="arena-canvas"></canvas>
+
+<!-- HUD -->
+<div class="game-hud">
+  <div class="ghud-left">
+    <a class="ghud-back" href="/world?user_id={{ user_id }}">← World</a>
+  </div>
+  <div class="ghud-right">
+    <div class="ghud-stat">⭐ <span class="ghud-val" id="g-score">0</span></div>
+    <div class="ghud-stat">🔥 <span class="ghud-val streak" id="g-streak">0</span></div>
+    <div class="ghud-stat">📝 <span class="ghud-val qnum" id="g-qnum">0</span></div>
+    <button class="ghud-back" onclick="showLB()">🏆</button>
+  </div>
+</div>
+
+<!-- Question Overlay -->
+<div class="q-overlay" id="q-overlay">
+  <div class="q-card" id="q-card">
+    <div class="q-emoji-big" id="q-emoji">🎯</div>
+    <div class="q-text" id="q-text">Loading...</div>
+    <button class="submit-btn" onclick="loadQuestion()">🚀 Start Playing!</button>
+
+    <!-- Feedback overlay inside card -->
+    <div class="fb-overlay" id="fb-overlay">
+      <div class="fb-icon" id="fb-icon"></div>
+      <div class="fb-text" id="fb-text"></div>
+      <button class="next-btn" onclick="nextQ()">Next Question →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti -->
+<div class="confetti-box" id="confetti-box"></div>
+
+<!-- Leaderboard Modal -->
+<div class="lb-modal" id="lb-modal">
+  <div class="lb-card">
+    <h2>🏆 Leaderboard</h2>
+    <div id="lb-list"></div>
+    <button class="submit-btn" onclick="document.getElementById('lb-modal').classList.remove('show')"
+      style="width:100%;margin-top:16px;text-align:center;display:block">Close</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const USER_ID = {{ user_id | default(0) }};
+const AGE_GROUP = "{{ age_group | default('creator') }}";
+const speechSynth = window.speechSynthesis;
+
+let score = 0, streak = 0, qnum = 0, currentQ = null, timerInt = null;
+
+// ══════════════════════════════════════════════════════════════════════
+// 3D ARENA BACKGROUND
+// ══════════════════════════════════════════════════════════════════════
+const canvas3d = document.getElementById('arena-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+cam.position.set(0, 5, 15);
+
+// Colors
+const ARENA_COLORS = {
+  toddler: { sky: 0xFFE4B5, floor: 0xFF69B4, accent: 0xFFD700, particles: 0xFF69B4 },
+  explorer: { sky: 0x1a1a2e, floor: 0x2d6a4f, accent: 0x9381FF, particles: 0x4ECDC4 },
+  creator:  { sky: 0x0a0a1a, floor: 0x1a0a3e, accent: 0xDA70D6, particles: 0x7B68EE },
+};
+const ac = ARENA_COLORS[AGE_GROUP] || ARENA_COLORS.creator;
+
+scene.background = new THREE.Color(ac.sky);
+scene.fog = new THREE.FogExp2(ac.sky, 0.02);
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+dl.position.set(10, 20, 10);
+scene.add(dl);
+
+// Floor
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(50, 48),
+  new THREE.MeshStandardMaterial({ color: ac.floor, roughness: 0.8, metalness: 0.2 })
+);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+// Arena ring columns
+for (let i = 0; i < 12; i++) {
+  const angle = (i / 12) * Math.PI * 2;
+  const col = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.4, 8, 8),
+    new THREE.MeshStandardMaterial({ color: ac.accent, emissive: ac.accent, emissiveIntensity: 0.3 })
+  );
+  col.position.set(Math.cos(angle)*12, 4, Math.sin(angle)*12);
+  col.castShadow = true;
+  scene.add(col);
+
+  // Orb on top
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 12, 12),
+    new THREE.MeshStandardMaterial({ color: ac.accent, emissive: ac.accent, emissiveIntensity: 1.5, transparent: true, opacity: 0.8 })
+  );
+  orb.position.set(Math.cos(angle)*12, 8.5, Math.sin(angle)*12);
+  scene.add(orb);
+}
+
+// Particles
+const pCount = 400;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(pCount * 3);
+for (let i = 0; i < pCount; i++) {
+  pPos[i*3]     = (Math.random()-0.5)*60;
+  pPos[i*3+1]   = Math.random()*30+2;
+  pPos[i*3+2]   = (Math.random()-0.5)*60;
+}
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({
+  color: ac.particles, size: 0.2, transparent: true, opacity: 0.6,
+  blending: THREE.AdditiveBlending, depthWrite: false,
+})));
+
+// Animate 3D
+let t3d = 0;
+function animate3d() {
+  requestAnimationFrame(animate3d);
+  t3d += 0.01;
+  cam.position.x = Math.sin(t3d * 0.15) * 15;
+  cam.position.z = Math.cos(t3d * 0.15) * 15;
+  cam.position.y = 5 + Math.sin(t3d * 0.3) * 2;
+  cam.lookAt(0, 3, 0);
+
+  const pp = pGeo.attributes.position.array;
+  for (let i = 0; i < pCount; i++) {
+    pp[i*3+1] += Math.sin(t3d*2 + i) * 0.015;
+  }
+  pGeo.attributes.position.needsUpdate = true;
+
+  renderer.render(scene, cam);
+}
+animate3d();
+
+window.addEventListener('resize', () => {
+  cam.aspect = window.innerWidth / window.innerHeight;
+  cam.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// GAME LOGIC
+// ══════════════════════════════════════════════════════════════════════
+async function loadQuestion() {
+  clearTimer();
+  document.getElementById('fb-overlay').classList.remove('show');
+
+  try {
+    const res = await fetch(`/api/v1/games/question?age_group=${AGE_GROUP}&user_id=${USER_ID}`);
+    currentQ = await res.json();
+    qnum++;
+    document.getElementById('g-qnum').textContent = qnum;
+    renderQ(currentQ);
+  } catch(e) { console.error(e); }
+}
+
+function renderQ(q) {
+  const card = document.getElementById('q-card');
+  let html = '';
+
+  // Timer
+  if (AGE_GROUP !== 'toddler') {
+    html += '<div class="timer-wrap"><div class="timer-bar-fill" id="timer-fill"></div></div>';
+  }
+
+  // Difficulty
+  if (AGE_GROUP !== 'toddler') {
+    const dc = q.difficulty === 'hard' ? 'q-diff-hard' : q.difficulty === 'medium' ? 'q-diff-medium' : 'q-diff-easy';
+    html += `<div class="q-difficulty"><span class="q-diff-badge ${dc}">${q.difficulty}</span></div>`;
+  }
+
+  if (q.emoji_hint) html += `<div class="q-emoji-big">${q.emoji_hint}</div>`;
+  html += `<div class="q-text">${q.question_text}</div>`;
+
+  // Audio cue for toddlers
+  if (AGE_GROUP === 'toddler') {
+    html += `<div class="audio-cue"><button class="audio-btn" onclick="speak('${q.question_text.replace(/'/g,"\\'")}')">🔊 Tap to hear!</button></div>`;
+    setTimeout(() => speak(q.question_text), 500);
+  }
+
+  // Options
+  if (q.question_type === 'audio_visual') {
+    html += '<div class="opts-toddler">';
+    q.options.forEach(opt => {
+      const emoji = opt.split(' ')[0];
+      const label = opt.split(' ').slice(1).join(' ');
+      html += `<div class="opt-t" onclick="submitAns('${opt.replace(/'/g,"\\'")}',this)">${emoji}<span>${label}</span></div>`;
+    });
+    html += '</div>';
+  } else if (q.question_type === 'open_ended') {
+    html += `<div class="open-area">
+      <input class="open-inp" id="open-ans" placeholder="Type your answer..."
+        onkeydown="if(event.key==='Enter')submitOpen()"/>
+      <button class="submit-btn" onclick="submitOpen()">Submit ✨</button>
+    </div>`;
+  } else {
+    html += '<div class="opts-grid">';
+    q.options.forEach(opt => {
+      html += `<div class="opt-g" onclick="submitAns('${opt.replace(/'/g,"\\'")}',this)">${opt}</div>`;
+    });
+    html += '</div>';
+  }
+
+  html += `<div class="fb-overlay" id="fb-overlay">
+    <div class="fb-icon" id="fb-icon"></div>
+    <div class="fb-text" id="fb-text"></div>
+    <button class="next-btn" onclick="nextQ()">Next Question →</button>
+  </div>`;
+
+  card.innerHTML = html;
+  if (AGE_GROUP !== 'toddler') startTimer();
+}
+
+async function submitAns(answer, el) {
+  clearTimer();
+  document.querySelectorAll('.opt-t,.opt-g').forEach(o => o.style.pointerEvents = 'none');
+  try {
+    const res = await fetch('/api/v1/games/answer', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: USER_ID, question_id: currentQ.question_id, answer, age_group: AGE_GROUP })
+    });
+    const d = await res.json();
+    handleFB(d, el);
+  } catch(e) { console.error(e); }
+}
+
+function submitOpen() {
+  const inp = document.getElementById('open-ans');
+  if (!inp || !inp.value.trim()) return;
+  submitAns(inp.value.trim(), inp);
+}
+
+function handleFB(d, el) {
+  if (d.correct) {
+    score += d.points_earned; streak++;
+    if (el && el.classList) el.classList.add('correct');
+    fireConfetti();
+    if (AGE_GROUP === 'toddler') speak('Yay! Great job!');
+  } else {
+    streak = 0;
+    if (el && el.classList) el.classList.add('wrong');
+    if (AGE_GROUP === 'toddler') speak('Oops! Try the next one!');
+  }
+  document.getElementById('g-score').textContent = score;
+  document.getElementById('g-streak').textContent = streak;
+
+  setTimeout(() => {
+    document.getElementById('fb-icon').textContent = d.correct ? '🎉' : '💪';
+    document.getElementById('fb-text').textContent = d.feedback;
+    document.getElementById('fb-overlay').classList.add('show');
+  }, 500);
+}
+
+function nextQ() { loadQuestion(); }
+
+// Timer
+function startTimer() {
+  const fill = document.getElementById('timer-fill');
+  if (!fill) return;
+  let tl = AGE_GROUP === 'creator' ? 20 : 30;
+  const tot = tl;
+  fill.style.width = '100%';
+  timerInt = setInterval(() => {
+    tl -= 0.1;
+    fill.style.width = (tl/tot*100)+'%';
+    if (tl <= 0) { clearInterval(timerInt); submitAns('__timeout__', null); }
+  }, 100);
+}
+function clearTimer() { if (timerInt) clearInterval(timerInt); }
+
+// Speech
+function speak(text) {
+  if (!speechSynth) return;
+  speechSynth.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/[^\w\s!?.,]/g,''));
+  u.rate = 0.85; u.pitch = 1.3; u.lang = 'en-US';
+  speechSynth.speak(u);
+}
+
+// Confetti
+function fireConfetti() {
+  const box = document.getElementById('confetti-box');
+  const cols = ['#FF9A8B','#FFD166','#6BCB77','#C9B8FF','#FF7A68','#4ECDC4'];
+  for (let i = 0; i < 50; i++) {
+    const p = document.createElement('div');
+    p.className = 'conf-piece';
+    p.style.left = Math.random()*100+'%';
+    p.style.background = cols[Math.floor(Math.random()*cols.length)];
+    p.style.animationDelay = Math.random()*0.5+'s';
+    p.style.animationDuration = (2+Math.random()*2)+'s';
+    p.style.width = (6+Math.random()*8)+'px';
+    p.style.height = (6+Math.random()*8)+'px';
+    box.appendChild(p);
+    setTimeout(() => p.remove(), 4000);
+  }
+}
+
+// Leaderboard
+async function showLB() {
+  document.getElementById('lb-modal').classList.add('show');
+  try {
+    const res = await fetch('/api/v1/games/leaderboard');
+    const d = await res.json();
+    const AV = {star:'⭐',rocket:'🚀',dragon:'🐉',uni:'🦄',robot:'🤖',cat:'🐱'};
+    const M = ['🥇','🥈','🥉'];
+    document.getElementById('lb-list').innerHTML = d.leaderboard.map((u,i) =>
+      `<div class="lb-item ${i<3?'lb-top':''}">
+        <span class="rank">${M[i]||'#'+(i+1)}</span>
+        <span class="avatar">${AV[u.avatar]||'⭐'}</span>
+        <span class="name">${u.name}</span>
+        <span class="pts">${u.points}</span>
+      </div>`
+    ).join('');
+  } catch(e) { document.getElementById('lb-list').innerHTML = '<div style="color:#888;text-align:center">Could not load</div>'; }
+}
+</script>
+{% endblock %}

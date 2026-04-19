@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Create a Story — KidVerse{% endblock %}
+
+{% block extra_styles %}
+.story-wrapper {
+  max-width: 760px; margin: 30px auto; padding: 0 20px 80px;
+}
+.story-header { text-align:center; margin-bottom:30px; }
+.story-header h2 { font-size: 2rem; }
+.story-header p  { color: var(--text-soft); font-weight:600; }
+
+.story-form {
+  background: white; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); padding: 32px; margin-bottom: 28px;
+}
+.form-group { margin-bottom: 22px; }
+.form-label {
+  display: block; font-weight: 800; margin-bottom: 8px; font-size: 1rem;
+}
+.form-input, .form-select {
+  width: 100%; padding: 14px 18px; border-radius: var(--radius);
+  border: 2px solid var(--accent); font-size: 1rem;
+  font-family: 'Nunito', sans-serif; font-weight: 600;
+  outline: none; transition: border-color 0.2s;
+  background: white; color: var(--text);
+}
+.form-input:focus, .form-select:focus { border-color: var(--btn); }
+
+.theme-pills {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+}
+.theme-pill {
+  background: var(--surface); border: 2px solid transparent;
+  border-radius: 999px; padding: 7px 16px;
+  font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  transition: all 0.15s ease; color: var(--text);
+  font-family: 'Nunito', sans-serif;
+}
+.theme-pill:hover, .theme-pill.active {
+  background: var(--btn); color: white; border-color: var(--btn);
+}
+
+/* Story Display */
+.story-display {
+  display: none; background: white;
+  border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.story-display.show { display: block; }
+
+.story-top {
+  background: linear-gradient(135deg, #F0ECFF, #DDD6FE);
+  padding: 30px 32px 20px;
+}
+.story-top h3 { font-size: 1.7rem; margin-bottom: 4px; }
+.story-top .meta { color: var(--text-soft); font-size: 0.9rem; font-weight:700; }
+
+.story-body {
+  padding: 28px 32px;
+  font-size: 1.08rem; line-height: 1.85;
+  color: var(--text); white-space: pre-wrap;
+}
+
+.story-actions {
+  padding: 20px 32px; border-top: 2px solid #F0F4F8;
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+
+.loading-story {
+  text-align: center; padding: 50px 20px;
+  display: none;
+}
+.loading-story.show { display: block; }
+.spinner {
+  width: 50px; height: 50px; border-radius: 50%;
+  border: 5px solid var(--accent); border-top-color: var(--btn);
+  animation: spin 0.8s linear infinite; margin: 0 auto 18px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.pts-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--yellow); color: var(--text);
+  padding: 5px 14px; border-radius: 999px;
+  font-weight: 800; font-size: 0.9rem;
+}
+{% endblock %}
+
+{% block content %}
+<div class="story-wrapper">
+  <div class="story-header">
+    <div style="font-size:3.5rem;margin-bottom:10px">📖</div>
+    <h2>Create Your Story</h2>
+    <p>Tell me what kind of story you want — I'll write it just for you!</p>
+  </div>
+
+  <div class="story-form">
+    <div class="form-group">
+      <label class="form-label">🌟 What's your story about?</label>
+      <input class="form-input" id="theme-input" type="text"
+             placeholder="e.g. A dragon who loves to bake cakes"
+             maxlength="100" />
+      <div class="theme-pills">
+        <button class="theme-pill" onclick="setTheme('A magical forest adventure')">🌳 Magical Forest</button>
+        <button class="theme-pill" onclick="setTheme('A space explorer who finds a new planet')">🚀 Space Explorer</button>
+        <button class="theme-pill" onclick="setTheme('A friendly monster who wants to make friends')">👾 Friendly Monster</button>
+        <button class="theme-pill" onclick="setTheme('An underwater kingdom with mermaids')">🧜 Underwater Kingdom</button>
+        <button class="theme-pill" onclick="setTheme('A robot who learns to feel emotions')">🤖 Feeling Robot</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">🦸 Who is the main character?</label>
+      <input class="form-input" id="character-input" type="text"
+             placeholder="e.g. Luna the brave girl, Max the curious fox"
+             maxlength="60" />
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:1.1rem;padding:16px"
+            onclick="generateStory()" id="generate-btn">
+      ✨ Create My Story!
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-story" id="loading">
+    <div class="spinner"></div>
+    <p style="font-size:1.1rem;font-weight:700;color:var(--text-soft)">
+      Writing your magical story... 🪄
+    </p>
+  </div>
+
+  <!-- Story Result -->
+  <div class="story-display" id="story-display">
+    <div class="story-top">
+      <div id="pts-badge-wrap"></div>
+      <h3 id="story-title">Story Title</h3>
+      <div class="meta" id="story-meta"></div>
+    </div>
+    <div class="story-body" id="story-body"></div>
+    <div class="story-actions">
+      <button class="btn btn-primary btn-sm" onclick="generateStory()">🔄 New Story</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyStory()">📋 Copy Story</button>
+      <a href="/dashboard?user_id={{ user_id }}" class="btn btn-secondary btn-sm">← Dashboard</a>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:20px">
+    <a href="/dashboard?user_id={{ user_id }}" class="btn btn-secondary btn-sm" id="back-link">← Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const USER_ID = {{ user_id | default(0) }};
+
+  function setTheme(theme) {
+    document.getElementById('theme-input').value = theme;
+    document.querySelectorAll('.theme-pill').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  async function generateStory() {
+    const theme     = document.getElementById('theme-input').value.trim();
+    const character = document.getElementById('character-input').value.trim() || 'a brave kid';
+    if (!theme) {
+      document.getElementById('theme-input').focus();
+      showToast('Please enter a story theme first!', '✍️');
+      return;
+    }
+
+    document.getElementById('generate-btn').disabled = true;
+    document.getElementById('story-display').classList.remove('show');
+    document.getElementById('loading').classList.add('show');
+
+    try {
+      const res = await fetch('/api/v1/story/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme, character, user_id: USER_ID })
+      });
+      const data = await res.json();
+
+      document.getElementById('story-title').textContent = data.title;
+      document.getElementById('story-body').textContent  = data.story;
+      document.getElementById('story-meta').textContent  =
+        `Theme: ${theme} · Character: ${character}`;
+
+      const badge = document.getElementById('pts-badge-wrap');
+      if (data.points_earned > 0) {
+        badge.innerHTML = `<div class="pts-badge">⭐ +${data.points_earned} points earned!</div>`;
+        notifyPoints(data.points_earned);
+      }
+
+      document.getElementById('loading').classList.remove('show');
+      document.getElementById('story-display').classList.add('show');
+      document.getElementById('story-display').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      document.getElementById('loading').classList.remove('show');
+      showToast('Oops! Something went wrong. Try again!', '😅');
+    }
+
+    document.getElementById('generate-btn').disabled = false;
+  }
+
+  function copyStory() {
+    const title = document.getElementById('story-title').textContent;
+    const body  = document.getElementById('story-body').textContent;
+    navigator.clipboard.writeText(`${title}\n\n${body}`)
+      .then(() => showToast('Story copied to clipboard!', '📋'));
+  }
+
+  // Enter key support
+  ['theme-input','character-input'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') generateStory();
+    });
+  });
+</script>
+{% endblock %}
