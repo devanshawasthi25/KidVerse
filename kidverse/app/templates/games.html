@@ -307,7 +307,7 @@ const canvas3d = document.getElementById('arena-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMapping = THREE.LinearToneMapping;
 
 const scene = new THREE.Scene();
 const cam = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);

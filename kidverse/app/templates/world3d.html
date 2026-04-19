@@ -265,7 +265,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMapping = THREE.LinearToneMapping;
 renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
@@ -555,10 +555,17 @@ const player = new THREE.Group();
 
 // Body
 const bodyMat = new THREE.MeshStandardMaterial({ color: 0xFF9A8B, roughness: 0.4, metalness: 0.1 });
-const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 1, 8, 16), bodyMat);
-body.position.y = 1.5;
-body.castShadow = true;
-player.add(body);
+// Body (cylinder + spheres to simulate capsule — r128 compatible)
+const bodyCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 16), bodyMat);
+bodyCyl.position.y = 1.5;
+bodyCyl.castShadow = true;
+player.add(bodyCyl);
+const bodyTop = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 8), bodyMat);
+bodyTop.position.y = 2.0;
+player.add(bodyTop);
+const bodyBot = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 8), bodyMat);
+bodyBot.position.y = 1.0;
+player.add(bodyBot);
 
 // Head
 const head = new THREE.Mesh(
@@ -663,8 +670,11 @@ function updatePlayer() {
     player.rotation.y = playerAngle;
 
     // Bobbing animation
-    body.position.y = 1.5 + Math.sin(Date.now() * 0.01) * 0.1;
-    head.position.y = 2.8 + Math.sin(Date.now() * 0.01) * 0.1;
+    const bob = Math.sin(Date.now() * 0.01) * 0.1;
+    bodyCyl.position.y = 1.5 + bob;
+    bodyTop.position.y = 2.0 + bob;
+    bodyBot.position.y = 1.0 + bob;
+    head.position.y = 2.8 + bob;
   }
 }
 
